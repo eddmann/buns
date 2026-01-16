@@ -1,5 +1,7 @@
 # buns
 
+![buns](docs/heading.png)
+
 Run TypeScript scripts with inline dependencies. No package.json needed.
 
 Inspired by [PEP 723](https://peps.python.org/pep-0723/) and [uv's inline scripts](https://docs.astral.sh/uv/guides/scripts/#declaring-script-dependencies), buns brings the same workflow to TypeScript/JavaScript with automatic Bun version management.
