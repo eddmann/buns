@@ -48,7 +48,7 @@ chmod +x buns && sudo mv buns /usr/local/bin/
 ```bash
 git clone https://github.com/eddmann/buns
 cd buns
-make build
+make build-release VERSION=0.1.0
 make install  # Installs to ~/.local/bin
 ```
 
@@ -201,10 +201,11 @@ Script → Parse metadata → Resolve Bun version → Download Bun (if needed)
 ```bash
 git clone https://github.com/eddmann/buns
 cd buns
-make test       # Run tests
-make lint       # Run linters
-make build      # Build binary
-make install    # Install to ~/.local/bin
+make test                           # Run tests
+make lint                           # Run linters
+make build                          # Build binary (dev, with debug symbols)
+make build-release VERSION=x.x.x    # Build binary (release, optimized)
+make install                        # Install to ~/.local/bin
 ```
 
 ## Credits

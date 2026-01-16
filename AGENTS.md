@@ -18,12 +18,16 @@ make build
 
 | Task | Command |
 |------|---------|
-| Build | `make build` |
+| Build (dev) | `make build` |
+| Build (release) | `make build-release VERSION=x.x.x` |
 | Test | `make test` |
 | Lint | `make lint` |
 | CI gate | `make can-release` |
 | Install locally | `make install` |
-| Set version | `make set-version VERSION=x.x.x` |
+
+**Build flags:**
+- `build` - Development build with debug symbols
+- `build-release` - Optimized build with `-s -w` (stripped), `-trimpath`, `CGO_ENABLED=0`, and version/commit/time injected via ldflags
 
 ## Code Conventions
 

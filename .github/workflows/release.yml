@@ -34,11 +34,8 @@ jobs:
       - name: Install dependencies
         run: make deps
 
-      - name: Set version
-        run: make set-version VERSION=${{ inputs.version }}
-
       - name: Build binary
-        run: make build
+        run: make build-release VERSION=${{ inputs.version }}
 
       - name: Rename binary
         run: mv bin/buns bin/${{ matrix.artifact }}

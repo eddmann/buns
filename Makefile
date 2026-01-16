@@ -3,14 +3,25 @@
 
 SHELL := /bin/bash
 
+VERSION ?= dev
+GIT_COMMIT := $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+BUILD_TIME := $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+LDFLAGS := -s -w \
+	-X github.com/eddmann/buns/internal/cli.Version=$(VERSION) \
+	-X github.com/eddmann/buns/internal/cli.GitCommit=$(GIT_COMMIT) \
+	-X github.com/eddmann/buns/internal/cli.BuildTime=$(BUILD_TIME)
+
 ##@ Development
 
 deps: ## Install dependencies and tools
 	go mod download
 	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 
-build: ## Build buns binary
+build: ## Build buns binary (development)
 	go build -o bin/buns ./cmd/buns
+
+build-release: ## Build buns binary (release, optimized)
+	CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o bin/buns ./cmd/buns
 
 install: build ## Install to ~/.local/bin
 	cp bin/buns ~/.local/bin/
