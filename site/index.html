@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>buns - Run TypeScript scripts with inline dependencies</title>
+    <meta name="description" content="buns is a CLI tool that lets you run TypeScript/JavaScript scripts with npm dependencies declared in comments. No package.json needed.">
+    <meta name="keywords" content="buns, typescript, javascript, bun, cli, npm, inline dependencies, scripts">
+    <meta name="author" content="Edd Mann">
+    <meta name="theme-color" content="#1a1614">
+
+    <link rel="canonical" href="https://eddmann.github.io/buns/">
+    <link rel="icon" type="image/png" href="logo.png">
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="buns - Run TypeScript scripts with inline dependencies">
+    <meta property="og:description" content="CLI tool for running TypeScript/JavaScript scripts with npm dependencies declared in comments. No package.json needed.">
+    <meta property="og:image" content="https://eddmann.github.io/buns/logo.png">
+    <meta property="og:url" content="https://eddmann.github.io/buns/">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="buns">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="buns - Run TypeScript scripts with inline dependencies">
+    <meta name="twitter:description" content="CLI tool for running TypeScript/JavaScript scripts with npm dependencies declared in comments.">
+    <meta name="twitter:image" content="https://eddmann.github.io/buns/logo.png">
+
+    <!-- JSON-LD -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "buns",
+        "description": "CLI tool for running TypeScript/JavaScript scripts with npm dependencies declared in comments",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "macOS, Linux",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "softwareVersion": "",
+        "author": {
+            "@type": "Person",
+            "name": "Edd Mann",
+            "url": "https://github.com/eddmann"
+        },
+        "license": "https://opensource.org/licenses/MIT"
+    }
+    </script>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bun: {
+                            cream: '#f5ebe0',
+                            blush: '#e8a4a4',
+                            orange: '#f97316',
+                            flame: '#ea580c',
+                            ember: '#c2410c',
+                            dark: '#1a1614',
+                            darker: '#0f0d0c',
+                            warm: '#2d2522',
+                            muted: '#6b5f58'
+                        }
+                    },
+                    fontFamily: {
+                        display: ['Fraunces', 'serif'],
+                        body: ['DM Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: #0f0d0c;
+            background-image:
+                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(249, 115, 22, 0.15), transparent),
+                radial-gradient(ellipse 60% 40% at 80% 60%, rgba(234, 88, 12, 0.08), transparent);
+        }
+
+        .grain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        }
+
+        .code-block {
+            background: linear-gradient(135deg, #1a1614 0%, #0f0d0c 100%);
+            border: 1px solid rgba(107, 95, 88, 0.3);
+            box-shadow:
+                0 0 0 1px rgba(249, 115, 22, 0.05),
+                0 20px 40px -20px rgba(0, 0, 0, 0.5),
+                inset 0 1px 0 rgba(245, 235, 224, 0.03);
+        }
+
+        .code-block::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(249, 115, 22, 0.3), transparent);
+        }
+
+        .feature-card {
+            background: linear-gradient(135deg, rgba(45, 37, 34, 0.6) 0%, rgba(26, 22, 20, 0.8) 100%);
+            border: 1px solid rgba(107, 95, 88, 0.2);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .feature-card:hover {
+            border-color: rgba(249, 115, 22, 0.4);
+            transform: translateY(-4px);
+            box-shadow:
+                0 20px 40px -20px rgba(249, 115, 22, 0.2),
+                0 0 60px -30px rgba(249, 115, 22, 0.3);
+        }
+
+        .install-tab {
+            transition: all 0.3s ease;
+        }
+
+        .install-tab.active {
+            background: rgba(249, 115, 22, 0.15);
+            color: #f97316;
+            border-color: rgba(249, 115, 22, 0.4);
+        }
+
+        .copy-btn {
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .install-command:hover .copy-btn {
+            opacity: 1;
+        }
+
+        .hero-glow {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(249, 115, 22, 0.12) 0%, transparent 70%);
+            filter: blur(60px);
+            animation: pulse 8s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .logo-float {
+            animation: float 4s ease-in-out infinite;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            animation: fadeInUp 0.6s ease-out forwards;
+            opacity: 0;
+        }
+
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.2s; }
+        .delay-3 { animation-delay: 0.3s; }
+        .delay-4 { animation-delay: 0.4s; }
+        .delay-5 { animation-delay: 0.5s; }
+
+        .syntax-comment { color: #6b7280; }
+        .syntax-keyword { color: #f472b6; }
+        .syntax-string { color: #a5f3a3; }
+        .syntax-function { color: #93c5fd; }
+        .syntax-variable { color: #fbbf24; }
+        .syntax-meta { color: #f97316; }
+
+        .terminal-dots span {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            box-shadow:
+                0 4px 14px -4px rgba(249, 115, 22, 0.5),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow:
+                0 8px 20px -4px rgba(249, 115, 22, 0.6),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        }
+
+        .btn-secondary {
+            background: rgba(45, 37, 34, 0.8);
+            border: 1px solid rgba(107, 95, 88, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(45, 37, 34, 1);
+            border-color: rgba(249, 115, 22, 0.4);
+        }
+    </style>
+</head>
+<body class="font-body text-bun-cream antialiased">
+    <div class="grain"></div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-bun-darker/80 border-b border-bun-muted/20">
+        <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+            <a href="#" class="flex items-center gap-3">
+                <img src="logo.png" alt="buns" class="h-8 w-auto">
+            </a>
+            <div class="flex items-center gap-6">
+                <a href="#features" class="text-sm text-bun-cream/70 hover:text-bun-orange transition-colors">Features</a>
+                <a href="#install" class="text-sm text-bun-cream/70 hover:text-bun-orange transition-colors">Install</a>
+                <a href="https://github.com/eddmann/buns" class="flex items-center gap-2 text-sm text-bun-cream/70 hover:text-bun-orange transition-colors">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                    GitHub
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+        <div class="hero-glow top-1/4 left-1/2 -translate-x-1/2"></div>
+
+        <div class="relative z-10 max-w-6xl mx-auto px-6 py-20">
+            <div class="text-center">
+                <div class="logo-float inline-block mb-8 animate-in">
+                    <img src="logo.png" alt="buns" class="h-32 md:h-40 w-auto mx-auto drop-shadow-2xl">
+                </div>
+
+                <h1 class="font-display text-4xl md:text-6xl lg:text-7xl font-bold mb-6 animate-in delay-1">
+                    Run TypeScript scripts<br>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-bun-orange to-bun-flame">with inline dependencies</span>
+                </h1>
+
+                <p class="text-lg md:text-xl text-bun-cream/60 max-w-2xl mx-auto mb-10 animate-in delay-2">
+                    No package.json needed. Just declare your npm packages in comments and run.
+                    Inspired by <a href="https://peps.python.org/pep-0723/" class="text-bun-orange hover:underline">PEP 723</a> and <a href="https://docs.astral.sh/uv/guides/scripts/" class="text-bun-orange hover:underline">uv</a>.
+                </p>
+
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-in delay-3">
+                    <a href="#install" class="btn-primary px-8 py-3 rounded-lg font-semibold text-white">
+                        Install buns
+                    </a>
+                    <a href="https://github.com/eddmann/buns" class="btn-secondary px-8 py-3 rounded-lg font-semibold text-bun-cream/90">
+                        View on GitHub
+                    </a>
+                </div>
+
+                <!-- Hero Code Block -->
+                <div class="max-w-2xl mx-auto animate-in delay-4">
+                    <div class="code-block rounded-xl overflow-hidden relative">
+                        <div class="flex items-center gap-2 px-4 py-3 border-b border-bun-muted/20">
+                            <div class="terminal-dots flex gap-2">
+                                <span class="bg-red-500/80"></span>
+                                <span class="bg-yellow-500/80"></span>
+                                <span class="bg-green-500/80"></span>
+                            </div>
+                            <span class="text-xs text-bun-muted ml-2 font-mono">hello.ts</span>
+                        </div>
+                        <pre class="p-6 text-left text-sm md:text-base font-mono overflow-x-auto"><code><span class="syntax-comment">#!/usr/bin/env buns</span>
+<span class="syntax-meta">// buns</span>
+<span class="syntax-meta">// packages = ["chalk@^5.0"]</span>
+
+<span class="syntax-keyword">import</span> <span class="syntax-variable">chalk</span> <span class="syntax-keyword">from</span> <span class="syntax-string">"chalk"</span>;
+
+console.<span class="syntax-function">log</span>(<span class="syntax-variable">chalk</span>.<span class="syntax-function">green</span>(<span class="syntax-string">"Hello from buns!"</span>));</code></pre>
+                    </div>
+
+                    <div class="mt-4 flex items-center justify-center gap-2 text-sm text-bun-muted">
+                        <span class="inline-flex items-center gap-1">
+                            <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Dependencies auto-installed
+                        </span>
+                        <span class="text-bun-muted/40">•</span>
+                        <span class="inline-flex items-center gap-1">
+                            <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            Cached for reuse
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features" class="relative py-32">
+        <div class="max-w-6xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="font-display text-3xl md:text-5xl font-bold mb-4">
+                    Scripts that <span class="text-bun-orange">just work</span>
+                </h2>
+                <p class="text-bun-cream/60 text-lg max-w-xl mx-auto">
+                    Everything you need to run standalone TypeScript scripts without the ceremony.
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="feature-card rounded-2xl p-8">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-bun-orange/20 to-bun-flame/10 flex items-center justify-center mb-6">
+                        <svg class="w-6 h-6 text-bun-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+                    </div>
+                    <h3 class="font-display text-xl font-semibold mb-3">Inline Dependencies</h3>
+                    <p class="text-bun-cream/60 leading-relaxed">
+                        Declare npm packages directly in your script comments. They're automatically installed and cached the first time you run.
+                    </p>
+                </div>
+
+                <div class="feature-card rounded-2xl p-8">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-bun-orange/20 to-bun-flame/10 flex items-center justify-center mb-6">
+                        <svg class="w-6 h-6 text-bun-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"/></svg>
+                    </div>
+                    <h3 class="font-display text-xl font-semibold mb-3">Bun Version Management</h3>
+                    <p class="text-bun-cream/60 leading-relaxed">
+                        Pin specific Bun versions per script. Missing versions are automatically downloaded from official releases.
+                    </p>
+                </div>
+
+                <div class="feature-card rounded-2xl p-8">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-bun-orange/20 to-bun-flame/10 flex items-center justify-center mb-6">
+                        <svg class="w-6 h-6 text-bun-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                    </div>
+                    <h3 class="font-display text-xl font-semibold mb-3">Smart Caching</h3>
+                    <p class="text-bun-cream/60 leading-relaxed">
+                        Dependencies are stored in a content-addressed cache. Same packages across scripts share a single installation.
+                    </p>
+                </div>
+
+                <div class="feature-card rounded-2xl p-8">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-bun-orange/20 to-bun-flame/10 flex items-center justify-center mb-6">
+                        <svg class="w-6 h-6 text-bun-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+                    </div>
+                    <h3 class="font-display text-xl font-semibold mb-3">Zero Config</h3>
+                    <p class="text-bun-cream/60 leading-relaxed">
+                        No package.json. No tsconfig.json. No node_modules. Just write your script and run it.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Installation -->
+    <section id="install" class="relative py-32 bg-gradient-to-b from-transparent via-bun-warm/30 to-transparent">
+        <div class="max-w-4xl mx-auto px-6">
+            <div class="text-center mb-12">
+                <h2 class="font-display text-3xl md:text-5xl font-bold mb-4">
+                    Get started in <span class="text-bun-orange">seconds</span>
+                </h2>
+                <p class="text-bun-cream/60 text-lg">
+                    Choose your preferred installation method.
+                </p>
+            </div>
+
+            <div class="space-y-4">
+                <!-- Homebrew -->
+                <div class="install-command group">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-xs font-semibold text-bun-orange uppercase tracking-wider">Homebrew</span>
+                        <span class="text-xs text-bun-muted">(Recommended)</span>
+                    </div>
+                    <div class="code-block rounded-xl p-4 flex items-center justify-between">
+                        <code class="font-mono text-sm md:text-base text-bun-cream/90">brew install eddmann/tap/buns</code>
+                        <button onclick="copyToClipboard('brew install eddmann/tap/buns', this)" class="copy-btn p-2 rounded-lg hover:bg-bun-warm transition-colors" title="Copy to clipboard">
+                            <svg class="w-5 h-5 text-bun-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick Install -->
+                <div class="install-command group">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-xs font-semibold text-bun-cream/70 uppercase tracking-wider">Quick Install</span>
+                    </div>
+                    <div class="code-block rounded-xl p-4 flex items-center justify-between">
+                        <code class="font-mono text-sm md:text-base text-bun-cream/90 break-all">curl -fsSL https://raw.githubusercontent.com/eddmann/buns/main/install.sh | sh</code>
+                        <button onclick="copyToClipboard('curl -fsSL https://raw.githubusercontent.com/eddmann/buns/main/install.sh | sh', this)" class="copy-btn p-2 rounded-lg hover:bg-bun-warm transition-colors flex-shrink-0 ml-4" title="Copy to clipboard">
+                            <svg class="w-5 h-5 text-bun-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Binary Download -->
+                <div class="install-command group">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-xs font-semibold text-bun-cream/70 uppercase tracking-wider">Direct Download</span>
+                    </div>
+                    <div class="code-block rounded-xl p-4">
+                        <div class="flex flex-wrap gap-3">
+                            <a href="https://github.com/eddmann/buns/releases/latest/download/buns-macos-arm64" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-bun-warm/50 hover:bg-bun-warm text-sm text-bun-cream/80 hover:text-bun-cream transition-colors">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                                macOS ARM64
+                            </a>
+                            <a href="https://github.com/eddmann/buns/releases/latest/download/buns-macos-x64" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-bun-warm/50 hover:bg-bun-warm text-sm text-bun-cream/80 hover:text-bun-cream transition-colors">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                                macOS x64
+                            </a>
+                            <a href="https://github.com/eddmann/buns/releases/latest/download/buns-linux-x64" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-bun-warm/50 hover:bg-bun-warm text-sm text-bun-cream/80 hover:text-bun-cream transition-colors">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 448 512"><path d="M220.8 123.3c1 .5 1.8 1.7 3 1.7 1.1 0 2.8-.4 2.9-1.5.2-1.4-1.9-2.3-3.2-2.9-1.7-.7-3.9-1-5.5-.1-.4.2-.8.7-.6 1.1.3 1.3 2.3 1.1 3.4 1.7zm-21.9 1.7c1.2 0 2-1.2 3-1.7 1.1-.6 3.1-.4 3.5-1.6.2-.4-.2-.9-.6-1.1-1.6-.9-3.8-.6-5.5.1-1.3.6-3.4 1.5-3.2 2.9.1 1 1.8 1.5 2.8 1.4zM420 403.8c-3.6-4-5.3-11.6-7.2-19.7-1.8-8.1-3.9-16.8-10.5-22.4-1.3-1.1-2.6-2.1-4-2.9-1.3-.8-2.7-1.5-4.1-2 9.2-27.3 5.6-54.5-3.7-79.1-11.4-30.1-31.3-56.4-46.5-74.4-17.1-21.5-33.7-41.9-33.4-72C311.1 85.4 315.7.1 234.8 0 132.4-.2 158 103.4 156.9 135.2c-1.7 23.4-6.4 41.8-22.5 64.7-18.9 22.5-45.5 58.8-58.1 96.7-6 17.9-8.8 36.1-6.2 53.3-6.5 5.8-11.4 14.7-16.6 20.2-4.2 4.3-10.3 5.9-17 8.3s-14 6-18.5 14.5c-2.1 3.9-2.8 8.1-2.8 12.4 0 3.9.6 7.9 1.2 11.8 1.2 8.1 2.5 15.7.8 20.8-5.2 14.4-5.9 24.4-2.2 31.7 3.8 7.3 11.4 10.5 20.1 12.3 17.3 3.6 40.8 2.7 59.3 12.5 19.8 10.4 39.9 14.1 55.9 10.4 11.6-2.6 21.1-9.6 25.9-20.2 12.5-.1 26.3-5.4 48.3-6.6 14.9-1.2 33.6 5.3 55.1 4.1.6 2.3 1.4 4.6 2.5 6.7v.1c8.3 16.7 23.8 24.3 40.3 23 16.6-1.3 34.1-11 48.3-27.9 13.6-16.4 36-23.2 50.9-32.2 7.4-4.5 13.4-10.1 13.9-18.3.4-8.2-4.4-17.3-15.5-29.7zM223.7 87.3c9.8-22.2 34.2-21.8 44-.4 6.5 14.2 3.6 30.9-4.3 40.4-1.6-.8-5.9-2.6-12.6-4.9 1.1-1.2 3.1-2.7 3.9-4.6 4.8-11.8-.2-27-9.1-27.3-7.3-.5-13.9 10.8-11.8 23-4.1-2-9.4-3.5-13-4.4-1-6.9-.3-14.6 2.9-21.8zM183 75.8c10.1 0 20.8 14.2 19.1 33.5-3.5 1-7.1 2.5-10.2 4.6 1.2-8.9-3.3-20.1-9.6-19.6-8.4.7-9.8 21.2-1.8 28.1 1 .8 1.9-.2-5.9 5.5-15.6-14.6-10.5-52.1 8.4-52.1zm-13.6 60.7c6.2-4.6 13.6-10 14.1-10.5 4.7-4.4 13.5-14.2 27.9-14.2 7.1 0 15.6 2.3 25.9 8.9 6.3 4.1 11.3 4.4 22.6 9.3 8.4 3.5 13.7 9.7 10.5 18.2-2.6 7.1-11 14.4-22.7 18.1-11.1 3.6-19.8 16-38.2 14.9-3.9-.2-7-1-9.6-2.1-8-3.5-12.2-10.4-20-15-8.6-4.8-13.2-10.4-14.7-15.3-1.4-4.9 0-9 4.2-12.3zm3.3 334c-2.7 35.1-43.9 34.4-75.3 18-29.9-15.8-68.6-6.5-76.5-21.9-2.4-4.7-2.4-12.7 2.6-26.4v-.2c2.4-7.6.6-16-.6-23.9-1.2-7.8-1.8-15 .9-20 3.5-6.7 8.5-9.1 14.8-11.3 10.3-3.7 11.8-3.4 19.6-9.9 5.5-5.7 9.5-12.9 14.3-18 5.1-5.5 10-8.1 17.7-6.9 8.1 1.2 15.1 6.8 21.9 16l19.6 35.6c9.5 19.9 43.1 48.4 41 68.9zm-30.5-154.8c17.9-12.1 33.6-21.5 44.1-29.9 11-8.8 18.2-19 18.2-29.7 0-4.6-1.4-8.2-3.2-11.4-1.7-3.2-3.6-6.1-4.9-9.4-2.1-5.4-1.1-13.3-1.1-21.8 0-1.8.3-3.6.3-5.5.6-3.6 1.4-7.1 2.8-10.6.5-1.2 1.1-2.4 1.8-3.5 1.5-2.1 3.5-3.6 6-4.5 3.5-1.3 7.6-1.1 11.6.2 5.8 2.1 10.5 7.3 14.3 12.7 4 5.7 7.1 12 9.1 18.3 3.1 9.6 4.2 18.9 3.1 26.5-1.2 7.6-4.6 13.2-10.9 15.2-3.7 1.2-7.3.9-11.1.5-3.8-.4-7.6-1.2-11.3-.3-3.5.9-6.1 3.4-9.1 7.2l-2 2.5c-2.3 3.2-4.5 6.1-7.2 9.1-2.7 3-5.7 5.7-9.2 8.4-17.7 13.6-51.4 24.6-65.1 31-1.9.9-3.4-1.6-2.1-3.5zm125.6-106.1c5.1-1.4 10.2-4.4 14-8.8 3.8-4.5 6.5-10.6 7.6-17.9 1.2-8.2.1-18.2-3.2-28.6-2.1-6.6-5.3-13.1-9.5-19.2-4.2-6-9.4-11.5-15.5-14.6-4.7-2.4-9.4-3.4-13.8-3.4-2.5 0-5 .3-7.4 1-2.4.7-4.7 1.7-6.8 3.1-2.1 1.4-4 3.3-5.5 5.5-.8 1.2-1.5 2.4-2.2 3.7-1.9 4-3.3 8.6-3.6 13.3-.1 1-.2 2-.2 3 0 7.2.3 14.3 1.5 19.9 1.3 5.7 3.3 10.1 6.6 13.4 1.6 1.6 3.1 3.2 4.8 4.7 1.7 1.5 3.5 2.8 5.7 3.7 2.5 1.1 5.1 1.8 7.8 2.1 6.3.8 13 .5 19.6-1.1z"/></svg>
+                                Linux x64
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Start -->
+            <div class="mt-16">
+                <h3 class="font-display text-2xl font-semibold text-center mb-8">Then run your first script</h3>
+                <div class="code-block rounded-xl overflow-hidden">
+                    <div class="flex items-center gap-2 px-4 py-3 border-b border-bun-muted/20">
+                        <div class="terminal-dots flex gap-2">
+                            <span class="bg-red-500/80"></span>
+                            <span class="bg-yellow-500/80"></span>
+                            <span class="bg-green-500/80"></span>
+                        </div>
+                        <span class="text-xs text-bun-muted ml-2 font-mono">Terminal</span>
+                    </div>
+                    <pre class="p-6 text-sm md:text-base font-mono overflow-x-auto"><code><span class="text-bun-muted">$</span> <span class="text-bun-cream">buns hello.ts</span>
+<span class="text-green-400">Hello from buns!</span></code></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="relative py-16 border-t border-bun-muted/20">
+        <div class="max-w-6xl mx-auto px-6">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-8">
+                <div class="flex items-center gap-3">
+                    <img src="logo.png" alt="buns" class="h-8 w-auto">
+                    <span class="text-bun-cream/60 text-sm">MIT License</span>
+                </div>
+
+                <div class="flex items-center gap-6">
+                    <a href="https://github.com/eddmann/buns" class="text-sm text-bun-cream/60 hover:text-bun-orange transition-colors">GitHub</a>
+                    <a href="https://github.com/eddmann/buns/releases" class="text-sm text-bun-cream/60 hover:text-bun-orange transition-colors">Releases</a>
+                    <a href="https://github.com/eddmann/buns/issues" class="text-sm text-bun-cream/60 hover:text-bun-orange transition-colors">Issues</a>
+                    <a href="https://github.com/eddmann" class="text-sm text-bun-cream/60 hover:text-bun-orange transition-colors">@eddmann</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function copyToClipboard(text, button) {
+            navigator.clipboard.writeText(text).then(() => {
+                const originalHTML = button.innerHTML;
+                button.innerHTML = '<svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';
+                setTimeout(() => {
+                    button.innerHTML = originalHTML;
+                }, 2000);
+            });
+        }
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
