@@ -1,0 +1,137 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version number (e.g., 1.0.0)"
+        required: true
+        type: string
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            artifact: buns-macos-arm64
+          - os: macos-15-intel
+            artifact: buns-macos-x64
+          - os: ubuntu-latest
+            artifact: buns-linux-x64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Install dependencies
+        run: make deps
+
+      - name: Set version
+        run: make set-version VERSION=${{ inputs.version }}
+
+      - name: Build binary
+        run: make build
+
+      - name: Rename binary
+        run: mv bin/buns bin/${{ matrix.artifact }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: bin/${{ matrix.artifact }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: artifacts
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          for dir in artifacts/*/; do
+            name=$(basename "$dir")
+            cp "$dir$name" "release/$name"
+            chmod +x "release/$name"
+          done
+          ls -la release/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: buns v${{ inputs.version }}
+          body: |
+            ## buns v${{ inputs.version }}
+
+            Run TypeScript scripts with inline dependencies. No package.json needed.
+
+            ### Installation
+
+            ```bash
+            # Homebrew (macOS)
+            brew install eddmann/tap/buns
+
+            # macOS (Apple Silicon)
+            curl -L https://github.com/eddmann/buns/releases/download/v${{ inputs.version }}/buns-macos-arm64 -o buns
+            chmod +x buns
+            sudo mv buns /usr/local/bin/
+
+            # macOS (Intel)
+            curl -L https://github.com/eddmann/buns/releases/download/v${{ inputs.version }}/buns-macos-x64 -o buns
+            chmod +x buns
+            sudo mv buns /usr/local/bin/
+
+            # Linux (x64)
+            curl -L https://github.com/eddmann/buns/releases/download/v${{ inputs.version }}/buns-linux-x64 -o buns
+            chmod +x buns
+            sudo mv buns /usr/local/bin/
+            ```
+          files: release/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update Homebrew tap
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          SHA_ARM=$(shasum -a 256 release/buns-macos-arm64 | cut -d' ' -f1)
+          SHA_X64=$(shasum -a 256 release/buns-macos-x64 | cut -d' ' -f1)
+
+          git clone https://x-access-token:${TAP_TOKEN}@github.com/eddmann/homebrew-tap.git
+          cd homebrew-tap
+
+          # Update version
+          sed -i "s/version \".*\"/version \"${{ inputs.version }}\"/" Formula/buns.rb
+
+          # Update ARM SHA256 (within on_arm block)
+          sed -i "/on_arm/,/end/{s/sha256 \"[a-f0-9]*\"/sha256 \"${SHA_ARM}\"/;}" Formula/buns.rb
+
+          # Update Intel SHA256 (within on_intel block)
+          sed -i "/on_intel/,/end/{s/sha256 \"[a-f0-9]*\"/sha256 \"${SHA_X64}\"/;}" Formula/buns.rb
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/buns.rb
+          git commit -m "chore(buns): update to ${{ inputs.version }}"
+          git push

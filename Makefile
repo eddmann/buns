@@ -5,6 +5,10 @@ SHELL := /bin/bash
 
 ##@ Development
 
+deps: ## Install dependencies and tools
+	go mod download
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
 build: ## Build buns binary
 	go build -o bin/buns ./cmd/buns
 
@@ -20,9 +24,15 @@ test: ## Run tests
 	go test ./...
 
 lint: ## Run linters
-	golangci-lint run
+	golangci-lint run --timeout 5m
 
 can-release: test lint ## CI gate - all checks
+
+##@ Utilities
+
+set-version: ## Set version (VERSION=x.x.x)
+	@if [ -z "$(VERSION)" ]; then echo "Usage: make set-version VERSION=x.x.x"; exit 1; fi
+	sed -i.bak 's/var Version = "[^"]*"/var Version = "$(VERSION)"/' internal/cli/version.go && rm internal/cli/version.go.bak
 
 ##@ Help
 

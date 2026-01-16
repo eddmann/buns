@@ -4,8 +4,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/edwardsmale/buns/internal/cache"
-	"github.com/edwardsmale/buns/internal/exec"
+	"github.com/eddmann/buns/internal/cache"
+	"github.com/eddmann/buns/internal/exec"
 	"github.com/spf13/cobra"
 )
 

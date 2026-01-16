@@ -13,10 +13,38 @@ Inspired by [PEP 723](https://peps.python.org/pep-0723/) and [uv's inline script
 
 ## Installation
 
+### Homebrew (Recommended)
+
+```bash
+brew install eddmann/tap/buns
+```
+
+### Quick Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/eddmann/buns/main/install.sh | sh
+```
+
+### Download Binary
+
+```bash
+# macOS (Apple Silicon)
+curl -L https://github.com/eddmann/buns/releases/latest/download/buns-macos-arm64 -o buns
+chmod +x buns && sudo mv buns /usr/local/bin/
+
+# macOS (Intel)
+curl -L https://github.com/eddmann/buns/releases/latest/download/buns-macos-x64 -o buns
+chmod +x buns && sudo mv buns /usr/local/bin/
+
+# Linux (x64)
+curl -L https://github.com/eddmann/buns/releases/latest/download/buns-linux-x64 -o buns
+chmod +x buns && sudo mv buns /usr/local/bin/
+```
+
 ### From Source
 
 ```bash
-git clone https://github.com/edwardsmale/buns
+git clone https://github.com/eddmann/buns
 cd buns
 make build
 make install  # Installs to ~/.local/bin
@@ -24,7 +52,13 @@ make install  # Installs to ~/.local/bin
 
 ## Quick Start
 
-1. Create a script with inline dependencies:
+**1. Run a simple script**
+
+```bash
+buns script.ts
+```
+
+**2. Add inline dependencies**
 
 ```typescript
 #!/usr/bin/env buns
@@ -36,13 +70,30 @@ import chalk from "chalk";
 console.log(chalk.green("Hello from buns!"));
 ```
 
-2. Run it:
+**3. Run it**
 
 ```bash
 buns script.ts
+# Hello from buns!
 ```
 
-That's it. Dependencies are installed automatically on first run and cached for reuse.
+**4. Pin a Bun version**
+
+```typescript
+#!/usr/bin/env buns
+// buns
+// bun = ">=1.0"
+// packages = ["zod@^3.0"]
+
+import { z } from "zod";
+console.log("Bun version:", Bun.version);
+```
+
+**5. Pipe from stdin**
+
+```bash
+echo 'console.log(Bun.version)' | buns run -
+```
 
 ## Script Metadata
 
@@ -58,84 +109,107 @@ import { z } from "zod";
 import chalk from "chalk";
 ```
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `bun` | string | Bun version constraint (semver) |
+| Field      | Type     | Description                       |
+| ---------- | -------- | --------------------------------- |
+| `bun`      | string   | Bun version constraint (semver)   |
 | `packages` | string[] | npm packages as `name@constraint` |
 
 ## Command Reference
 
-### `buns run <script.ts>`
+### buns run
 
 Run a TypeScript/JavaScript script with inline dependencies.
 
 ```bash
-buns script.ts                      # Shorthand for buns run
-buns run script.ts -- --flag value  # Pass args to script
-echo 'console.log("hi")' | buns -   # Read from stdin
+buns run <script.ts> [-- args...]
+buns <script.ts> [-- args...]  # Shorthand
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--bun <constraint>` | Override Bun version |
-| `--packages <pkgs>` | Add comma-separated packages |
-| `-v, --verbose` | Show detailed output |
-| `-q, --quiet` | Suppress buns output |
+| Flag         | Short | Description                               |
+| ------------ | ----- | ----------------------------------------- |
+| `--bun`      |       | Bun version constraint (overrides script) |
+| `--packages` |       | Comma-separated packages to add           |
+| `--verbose`  | `-v`  | Show detailed output                      |
+| `--quiet`    | `-q`  | Suppress buns output                      |
 
-### `buns cache`
+### buns cache
 
-Manage cached Bun binaries and dependencies.
+Manage the buns cache.
 
 ```bash
-buns cache list   # Show cached items
-buns cache dir    # Print cache path
-buns cache clean  # Remove dependency cache
+buns cache list              # Show cached items
+buns cache clean             # Remove dependency cache (default)
+buns cache clean --bun       # Remove Bun binaries
+buns cache clean --deps      # Remove dependencies
+buns cache clean --index     # Remove version index
+buns cache clean --all       # Remove everything
+buns cache dir               # Print cache path
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--bun` | Remove Bun binaries |
-| `--deps` | Remove dependencies (default) |
-| `--index` | Remove version index |
-| `--all` | Remove everything |
+### buns version
+
+Print version information.
+
+## Examples
+
+The `examples/` directory contains progressive examples:
+
+| Example                    | Description                          |
+| -------------------------- | ------------------------------------ |
+| `01-hello-world.ts`        | Simplest script, no dependencies     |
+| `02-bun-version.ts`        | Display Bun environment info         |
+| `03-cli-arguments.ts`      | Handle command-line arguments        |
+| `04-single-package.ts`     | One dependency (chalk)               |
+| `05-multiple-packages.ts`  | Multiple dependencies                |
+| `06-bun-constraint.ts`     | Require specific Bun version         |
+| `07-http-client.ts`        | HTTP requests with native fetch      |
+| `08-json-processing.ts`    | JSON processing from stdin           |
+| `09-cli-app.ts`            | Full CLI app with @clack/prompts     |
+
+```bash
+# Run examples
+buns examples/04-single-package.ts
+buns examples/09-cli-app.ts
+echo '{"test": 123}' | buns examples/08-json-processing.ts -- -
+```
 
 ## How It Works
 
 ```
-Script → Parse metadata → Resolve Bun version → Install deps → Execute
-                              ↓                      ↓
-                         ~/.buns/bun/          ~/.buns/deps/
+Script → Parse metadata → Resolve Bun version → Download Bun (if needed)
+                                              → Install dependencies (if needed)
+                                              → Execute script
 ```
 
-1. **Parse** - Extract `// buns` TOML block from script
-2. **Resolve Bun** - Match version constraint against GitHub releases, download if needed
-3. **Install deps** - Hash package list, check cache, run `bun install` if miss
-4. **Execute** - Run script with `NODE_PATH` pointing to cached node_modules
+**Bun binaries** are downloaded from [oven-sh/bun releases](https://github.com/oven-sh/bun/releases) - official pre-built binaries for all platforms.
+
+**Dependencies** are installed via Bun into content-addressed cache directories at `~/.buns/deps/{hash}/`.
 
 ## Cache Structure
 
 ```
 ~/.buns/
 ├── bun/{version}/bun     # Bun binaries
-├── deps/{hash}/          # Dependencies (package.json, node_modules)
-└── index/                # Cached Bun version list (24h TTL)
+├── deps/{hash}/          # Script dependencies (node_modules)
+└── index/                # Version index (24h TTL)
 ```
-
-## Examples
-
-See the [examples/](examples/) directory for progressive examples from hello world to full CLI apps.
 
 ## Development
 
 ```bash
-git clone https://github.com/edwardsmale/buns
+git clone https://github.com/eddmann/buns
 cd buns
-make build       # Build binary
-make test        # Run tests
-make lint        # Run linters
-make can-release # CI gate (test + lint)
+make test       # Run tests
+make lint       # Run linters
+make build      # Build binary
+make install    # Install to ~/.local/bin
 ```
+
+## Credits
+
+- [Bun](https://bun.sh/) - Fast JavaScript runtime
+- [oven-sh/bun releases](https://github.com/oven-sh/bun/releases) - Bun binary distribution
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE) for details.

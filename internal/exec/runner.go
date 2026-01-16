@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/edwardsmale/buns/internal/bun"
-	"github.com/edwardsmale/buns/internal/cache"
-	"github.com/edwardsmale/buns/internal/index"
-	"github.com/edwardsmale/buns/internal/metadata"
+	"github.com/eddmann/buns/internal/bun"
+	"github.com/eddmann/buns/internal/cache"
+	"github.com/eddmann/buns/internal/index"
+	"github.com/eddmann/buns/internal/metadata"
 )
 
 // Runner executes scripts with their dependencies

@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/edwardsmale/buns/internal/cache"
+	"github.com/eddmann/buns/internal/cache"
 	"github.com/spf13/cobra"
 )
 
