@@ -250,6 +250,15 @@
             background: rgba(45, 37, 34, 1);
             border-color: rgba(249, 115, 22, 0.4);
         }
+
+        @keyframes subtleBounce {
+            0%, 100% { transform: translateY(0); opacity: 0.6; }
+            50% { transform: translateY(6px); opacity: 1; }
+        }
+
+        .arrow-subtle {
+            animation: subtleBounce 2s ease-in-out infinite;
+        }
     </style>
 </head>
 <body class="font-body text-bun-cream antialiased">
@@ -334,6 +343,13 @@ console.<span class="syntax-function">log</span>(<span class="syntax-variable">c
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Scroll indicator -->
+        <div class="absolute bottom-8 left-1/2 -translate-x-1/2 arrow-subtle">
+            <svg class="w-6 h-6 text-bun-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+            </svg>
         </div>
     </section>
 
