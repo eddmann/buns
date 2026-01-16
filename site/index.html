@@ -94,6 +94,11 @@
 
         html {
             scroll-behavior: smooth;
+            overflow-x: hidden;
+        }
+
+        html, body {
+            max-width: 100vw;
         }
 
         body {
@@ -166,9 +171,17 @@
             opacity: 1;
         }
 
+        /* Always show copy button on touch devices */
+        @media (hover: none) {
+            .copy-btn {
+                opacity: 1;
+            }
+        }
+
         .hero-glow {
             position: absolute;
-            width: 600px;
+            width: 100%;
+            max-width: 600px;
             height: 600px;
             background: radial-gradient(circle, rgba(249, 115, 22, 0.12) 0%, transparent 70%);
             filter: blur(60px);
@@ -259,9 +272,71 @@
         .arrow-subtle {
             animation: subtleBounce 2s ease-in-out infinite;
         }
+
+        /* Mobile menu */
+        .mobile-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: rgba(15, 13, 12, 0.98);
+            border-bottom: 1px solid rgba(107, 95, 88, 0.2);
+            backdrop-filter: blur(12px);
+            padding: 1rem 1.5rem;
+        }
+
+        .mobile-menu.open {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .mobile-menu a {
+            padding: 0.5rem 0;
+        }
+
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .hamburger span {
+            display: block;
+            width: 24px;
+            height: 2px;
+            background: currentColor;
+            border-radius: 1px;
+            transition: all 0.3s ease;
+        }
+
+        .hamburger.open span:nth-child(1) {
+            transform: rotate(45deg) translate(5px, 5px);
+        }
+
+        .hamburger.open span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger.open span:nth-child(3) {
+            transform: rotate(-45deg) translate(5px, -5px);
+        }
+
+        @media (max-width: 639px) {
+            .hamburger {
+                display: flex;
+            }
+
+            .desktop-nav {
+                display: none;
+            }
+        }
     </style>
 </head>
-<body class="font-body text-bun-cream antialiased">
+<body class="font-body text-bun-cream antialiased overflow-x-hidden">
     <div class="grain"></div>
 
     <!-- Navigation -->
@@ -270,7 +345,7 @@
             <a href="#" class="flex items-center gap-3">
                 <img src="logo.png" alt="buns" class="h-8 w-auto">
             </a>
-            <div class="flex items-center gap-6">
+            <div class="desktop-nav hidden sm:flex items-center gap-6">
                 <a href="#features" class="text-sm text-bun-cream/70 hover:text-bun-orange transition-colors">Features</a>
                 <a href="#install" class="text-sm text-bun-cream/70 hover:text-bun-orange transition-colors">Install</a>
                 <a href="https://github.com/eddmann/buns" class="flex items-center gap-2 text-sm text-bun-cream/70 hover:text-bun-orange transition-colors">
@@ -278,34 +353,47 @@
                     GitHub
                 </a>
             </div>
+            <button class="hamburger text-bun-cream/70" onclick="toggleMobileMenu()" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+        <div id="mobileMenu" class="mobile-menu">
+            <a href="#features" onclick="closeMobileMenu()" class="text-sm text-bun-cream/70 hover:text-bun-orange transition-colors">Features</a>
+            <a href="#install" onclick="closeMobileMenu()" class="text-sm text-bun-cream/70 hover:text-bun-orange transition-colors">Install</a>
+            <a href="https://github.com/eddmann/buns" class="flex items-center gap-2 text-sm text-bun-cream/70 hover:text-bun-orange transition-colors">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                GitHub
+            </a>
         </div>
     </nav>
 
     <!-- Hero -->
-    <section class="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+    <section class="relative min-h-[90vh] sm:min-h-screen flex items-center justify-center overflow-hidden pt-20 w-full">
         <div class="hero-glow top-1/4 left-1/2 -translate-x-1/2"></div>
 
-        <div class="relative z-10 max-w-6xl mx-auto px-6 py-20">
-            <div class="text-center">
+        <div class="relative z-10 w-full max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
+            <div class="text-center w-full">
                 <div class="logo-float inline-block mb-8 animate-in">
                     <img src="logo.png" alt="buns" class="h-32 md:h-40 w-auto mx-auto drop-shadow-2xl">
                 </div>
 
-                <h1 class="font-display text-4xl md:text-6xl lg:text-7xl font-bold mb-6 animate-in delay-1">
+                <h1 class="font-display text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold mb-6 animate-in delay-1">
                     Run TypeScript scripts<br>
                     <span class="text-transparent bg-clip-text bg-gradient-to-r from-bun-orange to-bun-flame">with inline dependencies</span>
                 </h1>
 
-                <p class="text-lg md:text-xl text-bun-cream/60 max-w-2xl mx-auto mb-10 animate-in delay-2">
+                <p class="text-base sm:text-lg md:text-xl text-bun-cream/60 max-w-2xl mx-auto mb-10 animate-in delay-2 px-2">
                     No package.json needed. Just declare your npm packages in comments and run.
                     Inspired by <a href="https://peps.python.org/pep-0723/" class="text-bun-orange hover:underline">PEP 723</a> and <a href="https://docs.astral.sh/uv/guides/scripts/" class="text-bun-orange hover:underline">uv</a>.
                 </p>
 
-                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-in delay-3">
-                    <a href="#install" class="btn-primary px-8 py-3 rounded-lg font-semibold text-white">
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-12 sm:mb-16 animate-in delay-3">
+                    <a href="#install" class="btn-primary w-full sm:w-auto px-8 py-3 rounded-lg font-semibold text-white text-center">
                         Install buns
                     </a>
-                    <a href="https://github.com/eddmann/buns" class="btn-secondary px-8 py-3 rounded-lg font-semibold text-bun-cream/90">
+                    <a href="https://github.com/eddmann/buns" class="btn-secondary w-full sm:w-auto px-8 py-3 rounded-lg font-semibold text-bun-cream/90 text-center">
                         View on GitHub
                     </a>
                 </div>
@@ -330,12 +418,12 @@
 console.<span class="syntax-function">log</span>(<span class="syntax-variable">chalk</span>.<span class="syntax-function">green</span>(<span class="syntax-string">"Hello from buns!"</span>));</code></pre>
                     </div>
 
-                    <div class="mt-4 flex items-center justify-center gap-2 text-sm text-bun-muted">
+                    <div class="mt-4 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-sm text-bun-muted">
                         <span class="inline-flex items-center gap-1">
                             <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             Dependencies auto-installed
                         </span>
-                        <span class="text-bun-muted/40">•</span>
+                        <span class="hidden sm:inline text-bun-muted/40">•</span>
                         <span class="inline-flex items-center gap-1">
                             <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                             Cached for reuse
@@ -346,7 +434,7 @@ console.<span class="syntax-function">log</span>(<span class="syntax-variable">c
         </div>
 
         <!-- Scroll indicator -->
-        <div class="absolute bottom-8 left-1/2 -translate-x-1/2 arrow-subtle">
+        <div class="hidden sm:block absolute bottom-8 left-1/2 -translate-x-1/2 arrow-subtle">
             <svg class="w-6 h-6 text-bun-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
             </svg>
@@ -455,7 +543,7 @@ console.<span class="syntax-function">log</span>(<span class="syntax-variable">c
                         <span class="text-xs font-semibold text-bun-cream/70 uppercase tracking-wider">Direct Download</span>
                     </div>
                     <div class="code-block rounded-xl p-4">
-                        <div class="flex flex-wrap gap-3">
+                        <div class="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3">
                             <a href="https://github.com/eddmann/buns/releases/latest/download/buns-macos-arm64" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-bun-warm/50 hover:bg-bun-warm text-sm text-bun-cream/80 hover:text-bun-cream transition-colors">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
                                 macOS ARM64
@@ -501,7 +589,7 @@ console.<span class="syntax-function">log</span>(<span class="syntax-variable">c
                     <span class="text-bun-cream/60 text-sm">MIT License</span>
                 </div>
 
-                <div class="flex items-center gap-6">
+                <div class="flex flex-wrap items-center justify-center md:justify-end gap-4 sm:gap-6">
                     <a href="https://github.com/eddmann/buns" class="text-sm text-bun-cream/60 hover:text-bun-orange transition-colors">GitHub</a>
                     <a href="https://github.com/eddmann/buns/releases" class="text-sm text-bun-cream/60 hover:text-bun-orange transition-colors">Releases</a>
                     <a href="https://github.com/eddmann/buns/issues" class="text-sm text-bun-cream/60 hover:text-bun-orange transition-colors">Issues</a>
@@ -520,6 +608,21 @@ console.<span class="syntax-function">log</span>(<span class="syntax-variable">c
                     button.innerHTML = originalHTML;
                 }, 2000);
             });
+        }
+
+        // Mobile menu toggle
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            const hamburger = document.querySelector('.hamburger');
+            menu.classList.toggle('open');
+            hamburger.classList.toggle('open');
+        }
+
+        function closeMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            const hamburger = document.querySelector('.hamburger');
+            menu.classList.remove('open');
+            hamburger.classList.remove('open');
         }
 
         // Smooth scroll for anchor links
