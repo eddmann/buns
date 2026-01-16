@@ -1,6 +1,6 @@
 # Binaries
 bin/
-buns
+/buns
 
 # Go
 *.exe
