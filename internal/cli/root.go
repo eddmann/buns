@@ -1,0 +1,39 @@
+package cli
+
+import (
+	"github.com/spf13/cobra"
+)
+
+var (
+	verbose bool
+	quiet   bool
+)
+
+var rootCmd = &cobra.Command{
+	Use:   "buns [script.ts]",
+	Short: "Run TypeScript/JavaScript scripts with inline dependencies",
+	Long: `buns runs TypeScript/JavaScript scripts with inline npm dependencies
+and automatic Bun version management.
+
+Example:
+  buns script.ts
+  buns run script.ts --packages=zod@^3.0
+  echo 'console.log("hi")' | buns run -`,
+	Args: cobra.ArbitraryArgs,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 {
+			return cmd.Help()
+		}
+		// Default behavior: buns script.ts → buns run script.ts
+		return runScript(args[0], args[1:])
+	},
+}
+
+func init() {
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Show detailed output")
+	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Suppress buns output")
+}
+
+func Execute() error {
+	return rootCmd.Execute()
+}
