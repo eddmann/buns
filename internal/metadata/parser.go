@@ -36,9 +36,7 @@ func Parse(content []byte) (*Metadata, error) {
 		if strings.HasPrefix(trimmed, "//") {
 			// Strip the // prefix and any single space after it
 			content := strings.TrimPrefix(trimmed, "//")
-			if strings.HasPrefix(content, " ") {
-				content = content[1:]
-			}
+			content = strings.TrimPrefix(content, " ")
 			tomlLines = append(tomlLines, content)
 		} else {
 			// First non-comment line ends the block

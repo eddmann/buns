@@ -55,13 +55,11 @@ func (idx *Index) GetVersions() ([]*semver.Version, error) {
 		if cached, cacheErr := idx.loadCachedVersions(); cacheErr == nil {
 			return cached, nil
 		}
-		return nil, fmt.Errorf("failed to fetch Bun index from GitHub: %w\nRun with network access to initialize the index cache.", err)
+		return nil, fmt.Errorf("failed to fetch Bun index from GitHub: %w\nRun with network access to initialize the index cache", err)
 	}
 
-	// Cache the versions
-	if err := idx.cacheVersions(versions); err != nil {
-		// Non-fatal, just log in verbose mode
-	}
+	// Cache the versions (non-fatal if it fails)
+	_ = idx.cacheVersions(versions)
 
 	return versions, nil
 }
@@ -79,7 +77,7 @@ func (idx *Index) fetchVersions() ([]*semver.Version, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("GitHub API returned %d", resp.StatusCode)

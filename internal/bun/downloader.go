@@ -56,15 +56,15 @@ func (d *Downloader) download(version *semver.Version) error {
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}
-	defer os.Remove(tmpFile.Name())
-	defer tmpFile.Close()
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	defer func() { _ = tmpFile.Close() }()
 
 	// Download with progress bar
 	resp, err := http.Get(url)
 	if err != nil {
 		return fmt.Errorf("failed to download Bun: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to download Bun: HTTP %d", resp.StatusCode)
@@ -97,7 +97,7 @@ func (d *Downloader) extract(zipPath string, version *semver.Version) error {
 	if err != nil {
 		return err
 	}
-	defer r.Close()
+	defer func() { _ = r.Close() }()
 
 	// Find the bun binary in the zip
 	var bunFile *zip.File
@@ -125,13 +125,13 @@ func (d *Downloader) extract(zipPath string, version *semver.Version) error {
 	if err != nil {
 		return err
 	}
-	defer outFile.Close()
+	defer func() { _ = outFile.Close() }()
 
 	rc, err := bunFile.Open()
 	if err != nil {
 		return err
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 
 	if _, err := io.Copy(outFile, rc); err != nil {
 		return err

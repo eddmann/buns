@@ -66,7 +66,7 @@ func (r *Registry) fetchPackage(name string) (*PackageInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch package %s: %w", name, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, fmt.Errorf("package not found: %s", name)

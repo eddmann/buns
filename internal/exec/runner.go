@@ -61,11 +61,11 @@ func (r *Runner) Run(opts RunOptions) (int, error) {
 		if err != nil {
 			return 1, fmt.Errorf("failed to create temp file: %w", err)
 		}
-		defer os.Remove(tmpFile.Name())
+		defer func() { _ = os.Remove(tmpFile.Name()) }()
 		if _, err := tmpFile.Write(content); err != nil {
 			return 1, fmt.Errorf("failed to write temp file: %w", err)
 		}
-		tmpFile.Close()
+		_ = tmpFile.Close()
 		scriptPath = tmpFile.Name()
 	} else {
 		scriptPath, err = filepath.Abs(opts.Script)
