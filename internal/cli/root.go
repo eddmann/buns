@@ -48,8 +48,8 @@ Example:
 }
 
 func init() {
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Show detailed output")
-	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "Suppress buns output")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "show detailed output")
+	rootCmd.PersistentFlags().BoolVarP(&quiet, "quiet", "q", false, "suppress buns output")
 
 	// Register script execution flags on root command too
 	addRunFlags(rootCmd)
