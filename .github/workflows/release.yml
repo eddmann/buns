@@ -2,11 +2,6 @@ name: Release
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: "Version number (e.g., 1.0.0)"
-        required: true
-        type: string
 
 jobs:
   build:
@@ -34,8 +29,14 @@ jobs:
       - name: Install dependencies
         run: make deps
 
+      - name: Extract version from changelog
+        id: version
+        run: |
+          VERSION=$(grep -m1 -oP '(?<=^## \[)[^]]+' CHANGELOG.md)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Build binary
-        run: make build-release VERSION=${{ inputs.version }}
+        run: make build-release VERSION=${{ steps.version.outputs.version }}
 
       - name: Rename binary
         run: mv bin/buns bin/${{ matrix.artifact }}
@@ -56,6 +57,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Extract changelog
+        id: changelog
+        run: |
+          # Extract the latest version from CHANGELOG.md (first ## [X.Y.Z] entry)
+          VERSION=$(grep -m1 -oP '(?<=^## \[)[^]]+' CHANGELOG.md)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+          # Extract content until the next ## or end of file
+          CONTENT=$(awk '
+            /^## \[/ {
+              if (found) exit
+              found=1
+              next
+            }
+            found { print }
+          ' CHANGELOG.md)
+
+          # Use GitHub's multiline string format
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          echo "$CONTENT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Download all artifacts
         uses: actions/download-artifact@v5
         with:
@@ -74,34 +97,9 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ inputs.version }}
-          name: buns v${{ inputs.version }}
-          body: |
-            ## buns v${{ inputs.version }}
-
-            Run TypeScript scripts with inline dependencies. No package.json needed.
-
-            ### Installation
-
-            ```bash
-            # Homebrew (macOS)
-            brew install eddmann/tap/buns
-
-            # macOS (Apple Silicon)
-            curl -L https://github.com/eddmann/buns/releases/download/v${{ inputs.version }}/buns-macos-arm64 -o buns
-            chmod +x buns
-            sudo mv buns /usr/local/bin/
-
-            # macOS (Intel)
-            curl -L https://github.com/eddmann/buns/releases/download/v${{ inputs.version }}/buns-macos-x64 -o buns
-            chmod +x buns
-            sudo mv buns /usr/local/bin/
-
-            # Linux (x64)
-            curl -L https://github.com/eddmann/buns/releases/download/v${{ inputs.version }}/buns-linux-x64 -o buns
-            chmod +x buns
-            sudo mv buns /usr/local/bin/
-            ```
+          tag_name: v${{ steps.changelog.outputs.version }}
+          name: buns v${{ steps.changelog.outputs.version }}
+          body: ${{ steps.changelog.outputs.content }}
           files: release/*
           draft: false
           prerelease: false
@@ -119,7 +117,7 @@ jobs:
           cd homebrew-tap
 
           # Update version
-          sed -i "s/version \".*\"/version \"${{ inputs.version }}\"/" Formula/buns.rb
+          sed -i "s/version \".*\"/version \"${{ steps.changelog.outputs.version }}\"/" Formula/buns.rb
 
           # Update ARM SHA256 (within on_arm block)
           sed -i "/on_arm/,/end/{s/sha256 \"[a-f0-9]*\"/sha256 \"${SHA_ARM}\"/;}" Formula/buns.rb
@@ -130,5 +128,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Formula/buns.rb
-          git commit -m "chore(buns): update to ${{ inputs.version }}"
+          git commit -m "chore(buns): update to ${{ steps.changelog.outputs.version }}"
           git push
