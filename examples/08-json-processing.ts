@@ -2,7 +2,10 @@
 // buns
 // bun = ">=1.0"
 
-// Process JSON from stdin or file using Bun's native APIs
+// Examples:
+//   echo '{"key": "value"}' | buns 08-json-processing.ts
+//   buns 08-json-processing.ts data.json
+
 const input = process.argv[2] ?? "-";
 
 let json: string;

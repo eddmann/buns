@@ -11,6 +11,7 @@ Inspired by [PEP 723](https://peps.python.org/pep-0723/) and [uv's inline script
 - **Inline dependencies** - Declare npm packages in script comments, installed automatically
 - **Bun version management** - Pin specific Bun versions per script, downloaded on demand
 - **Dependency caching** - Same packages across scripts share a single cache
+- **Sandboxing & isolation** - Run scripts with controlled filesystem, network, and resource limits
 - **Zero config** - No package.json, no tsconfig, just run
 
 ## Installation
@@ -127,12 +128,21 @@ buns run <script.ts> [-- args...]
 buns <script.ts> [-- args...]  # Shorthand
 ```
 
-| Flag         | Short | Description                               |
-| ------------ | ----- | ----------------------------------------- |
-| `--bun`      |       | Bun version constraint (overrides script) |
-| `--packages` |       | Comma-separated packages to add           |
-| `--verbose`  | `-v`  | Show detailed output                      |
-| `--quiet`    | `-q`  | Suppress buns output                      |
+| Flag           | Short | Description                               |
+| -------------- | ----- | ----------------------------------------- |
+| `--bun`        |       | Bun version constraint (overrides script) |
+| `--packages`   |       | Comma-separated packages to add           |
+| `--verbose`    | `-v`  | Show detailed output                      |
+| `--quiet`      | `-q`  | Suppress buns output                      |
+| `--sandbox`    |       | Enable sandboxing (restricts filesystem)  |
+| `--offline`    |       | Block all network access                  |
+| `--allow-host` |       | Allow network to specific hosts           |
+| `--allow-read` |       | Additional readable paths                 |
+| `--allow-write`|       | Additional writable paths                 |
+| `--allow-env`  |       | Environment variables to pass             |
+| `--memory`     |       | Memory limit in MB (default: 128)                   |
+| `--timeout`    |       | Execution timeout in seconds (default: 30)          |
+| `--cpu`        |       | CPU time limit in seconds, Linux only (default: 30) |
 
 ### buns cache
 
@@ -154,26 +164,23 @@ Print version information.
 
 ## Examples
 
-The `examples/` directory contains progressive examples:
-
-| Example                    | Description                          |
-| -------------------------- | ------------------------------------ |
-| `01-hello-world.ts`        | Simplest script, no dependencies     |
-| `02-bun-version.ts`        | Display Bun environment info         |
-| `03-cli-arguments.ts`      | Handle command-line arguments        |
-| `04-single-package.ts`     | One dependency (chalk)               |
-| `05-multiple-packages.ts`  | Multiple dependencies                |
-| `06-bun-constraint.ts`     | Require specific Bun version         |
-| `07-http-client.ts`        | HTTP requests with native fetch      |
-| `08-json-processing.ts`    | JSON processing from stdin           |
-| `09-cli-app.ts`            | Full CLI app with @clack/prompts     |
+The `examples/` directory contains 14 progressive examples demonstrating all buns features - from basic script execution through inline dependencies, Bun version constraints, CLI apps, and sandboxing.
 
 ```bash
-# Run examples
+# Simple dependency usage
 buns examples/04-single-package.ts
+
+# Full CLI app with @clack/prompts
 buns examples/09-cli-app.ts
-echo '{"test": 123}' | buns examples/08-json-processing.ts -- -
+
+# Sandboxed execution with resource limits
+buns examples/10-sandbox-basic.ts --sandbox --memory 64 --timeout 10
+
+# Network filtering (allow specific hosts)
+buns examples/12-sandbox-allow-host.ts --allow-host httpbin.org
 ```
+
+See [examples/README.md](examples/README.md) for the complete list and detailed usage instructions.
 
 ## How It Works
 
@@ -195,6 +202,58 @@ Script → Parse metadata → Resolve Bun version → Download Bun (if needed)
 ├── deps/{hash}/          # Script dependencies (node_modules)
 └── index/                # Version index (24h TTL)
 ```
+
+## Security & Sandboxing
+
+buns supports sandboxed execution to restrict script capabilities.
+
+### Sandbox Modes
+
+**Filesystem sandbox** (`--sandbox`): Restricts filesystem access to script directory, dependencies, and explicit paths.
+
+**Network sandbox** (`--offline`): Blocks all network access.
+
+**Host filtering** (`--allow-host`): Allows network only to specified hosts.
+
+### Resource Limits
+
+```bash
+buns script.ts --sandbox --memory 64 --timeout 10 --cpu 5
+```
+
+| Flag        | Default | Description                          |
+| ----------- | ------- | ------------------------------------ |
+| `--memory`  | 128     | Memory limit in MB                   |
+| `--timeout` | 30      | Wall-clock timeout (seconds)         |
+| `--cpu`     | 30      | CPU time limit (seconds, Linux only) |
+
+Resource enforcement depends on available tooling:
+- **nsjail** (Linux): Hard memory and CPU limits enforced via cgroups
+- **bubblewrap** (Linux): Timeout and basic isolation
+- **macOS/fallback**: `--memory` sets `BUN_JSC_forceRAMSize` as a GC hint; `--cpu` has no effect
+
+### Filesystem Access
+
+```bash
+# Allow read from /data, write to /tmp
+buns script.ts --sandbox --allow-read /data --allow-write /tmp
+```
+
+By default, sandboxed scripts can only read their script file and dependencies. Use `--allow-read` and `--allow-write` to grant access to additional paths.
+
+### Environment Variables
+
+```bash
+# Only pass specific env vars
+API_KEY=secret buns script.ts --sandbox --allow-env API_KEY,DEBUG
+```
+
+In sandbox mode, environment variables are filtered. Use `--allow-env` to pass specific variables to the script.
+
+### Platform Support
+
+- **macOS**: Uses `sandbox-exec` with custom profiles
+- **Linux**: Uses `bubblewrap` or `nsjail` for full sandbox, `unshare` for network-only (auto-detected)
 
 ## Development
 

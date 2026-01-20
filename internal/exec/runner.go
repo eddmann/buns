@@ -1,17 +1,21 @@
 package exec
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/eddmann/buns/internal/bun"
 	"github.com/eddmann/buns/internal/cache"
 	"github.com/eddmann/buns/internal/index"
 	"github.com/eddmann/buns/internal/metadata"
+	"github.com/eddmann/buns/internal/proxy"
+	"github.com/eddmann/buns/internal/sandbox"
 )
 
 // Runner executes scripts with their dependencies
@@ -41,6 +45,17 @@ type RunOptions struct {
 	Args           []string
 	BunConstraint  string   // Override bun version from CLI
 	ExtraPackages  []string // Additional packages from CLI
+
+	// Sandbox options
+	Sandbox        sandbox.Sandbox // Sandbox instance (set by CLI)
+	Network        bool            // Whether network is enabled
+	AllowHosts     []string        // Allowed hosts for network access
+	AllowRead      []string        // Additional readable paths
+	AllowWrite     []string        // Additional writable paths
+	AllowEnv       []string        // Environment variables to pass through
+	MemoryMB       int             // Memory limit in MB
+	TimeoutSecs    int             // Execution timeout in seconds
+	CPUSeconds     int             // CPU time limit in seconds
 }
 
 // Run executes a script with its dependencies
@@ -139,10 +154,110 @@ func (r *Runner) Run(opts RunOptions) (int, error) {
 		}
 	}
 
-	// Execute script
-	r.log("Executing: %s run %s", bunPath, scriptPath)
+	// If sandbox is set and provides isolation, use sandboxed execution
+	if opts.Sandbox != nil && opts.Sandbox.IsSandboxed() {
+		return r.execScriptSandboxed(bunPath, scriptPath, opts, depsDir)
+	}
 
+	// Execute script normally
+	r.log("Executing: %s run %s", bunPath, scriptPath)
 	return r.execScript(bunPath, scriptPath, opts.Args, depsDir)
+}
+
+// execScriptSandboxed runs the script in a sandbox
+func (r *Runner) execScriptSandboxed(bunPath, scriptPath string, opts RunOptions, depsDir string) (int, error) {
+	sb := opts.Sandbox
+
+	// Start proxy if network is needed and we're sandboxing
+	var proxyMgr *proxy.Manager
+	var proxyEnv []string
+	var proxySocketPath string
+	var proxyPort int
+	var proxySOCKS5Port int
+
+	needsProxy := sb.IsSandboxed() && opts.Network
+
+	if needsProxy {
+		r.log("Starting proxy server...")
+		var err error
+		proxyMgr, err = proxy.NewManager(proxy.ManagerConfig{
+			AllowedHosts: opts.AllowHosts,
+			Verbose:      r.verbose,
+		})
+		if err != nil {
+			return 1, fmt.Errorf("failed to start proxy: %w", err)
+		}
+		defer proxyMgr.Stop()
+
+		proxyEnv = proxyMgr.EnvVars()
+		proxySocketPath = proxyMgr.SocketPath()
+		proxyPort = proxyMgr.Port()
+		proxySOCKS5Port = proxyMgr.SOCKS5Port()
+
+		r.log("Proxy started on port %d", proxyPort)
+	}
+
+	// Get working directory
+	workDir, err := os.Getwd()
+	if err != nil {
+		workDir = filepath.Dir(scriptPath)
+	}
+
+	// Build node_modules path
+	var nodeModules string
+	if depsDir != "" {
+		nodeModules = filepath.Join(depsDir, "node_modules")
+	}
+
+	// Build sandbox config
+	cfg := &sandbox.Config{
+		Network:         opts.Network,
+		AllowedHosts:    opts.AllowHosts,
+		ProxySocketPath: proxySocketPath,
+		ProxyPort:       proxyPort,
+		ProxySOCKS5Port: proxySOCKS5Port,
+
+		ReadablePaths: opts.AllowRead,
+		WritablePaths: opts.AllowWrite,
+		WorkDir:       workDir,
+
+		MemoryMB:   opts.MemoryMB,
+		Timeout:    time.Duration(opts.TimeoutSecs) * time.Second,
+		CPUSeconds: opts.CPUSeconds,
+
+		BunBinary:   bunPath,
+		ScriptPath:  scriptPath,
+		ScriptArgs:  opts.Args,
+		NodeModules: nodeModules,
+
+		Env:            proxyEnv,
+		AllowedEnvVars: opts.AllowEnv,
+
+		Stdin:   os.Stdin,
+		Stdout:  os.Stdout,
+		Stderr:  os.Stderr,
+		Verbose: r.verbose,
+	}
+
+	r.log("Using sandbox: %s", sb.Name())
+
+	// Create context with timeout
+	ctx := context.Background()
+	if opts.TimeoutSecs > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Duration(opts.TimeoutSecs)*time.Second)
+		defer cancel()
+	}
+
+	r.log("Executing sandboxed: %s run %s", bunPath, scriptPath)
+
+	result, err := sb.Execute(ctx, cfg)
+	if err != nil {
+		return 1, fmt.Errorf("execution failed: %w", err)
+	}
+
+	r.log("Exit code: %d", result.ExitCode)
+	return result.ExitCode, nil
 }
 
 // installDeps installs packages to the deps directory
@@ -188,7 +303,7 @@ func (r *Runner) installDeps(bunPath, depsDir string, packages []string) error {
 	return cmd.Run()
 }
 
-// execScript runs the script with the bun binary
+// execScript runs the script with the bun binary (non-sandboxed)
 func (r *Runner) execScript(bunPath, scriptPath string, args []string, depsDir string) (int, error) {
 	cmdArgs := []string{"run", scriptPath}
 	cmdArgs = append(cmdArgs, args...)

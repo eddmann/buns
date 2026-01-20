@@ -3,6 +3,9 @@
 // bun = ">=1.0"
 // packages = ["@clack/prompts@^0.9"]
 
+// Example:
+//   buns 09-cli-app.ts
+
 import * as p from "@clack/prompts";
 
 p.intro("buns CLI Example");

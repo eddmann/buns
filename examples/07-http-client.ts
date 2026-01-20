@@ -2,7 +2,6 @@
 // buns
 // bun = ">=1.0"
 
-// Using Bun's native fetch - no external packages needed
 console.log("Fetching random user from API...\n");
 
 const response = await fetch("https://randomuser.me/api/");

@@ -22,6 +22,11 @@ buns 01-hello-world.ts
 | 07 | `07-http-client.ts` | HTTP requests with native fetch |
 | 08 | `08-json-processing.ts` | Process JSON from stdin/file |
 | 09 | `09-cli-app.ts` | Full CLI app with @clack/prompts |
+| 10 | `10-sandbox-basic.ts` | Basic sandboxing with resource limits |
+| 11 | `11-sandbox-offline.ts` | Network isolation (offline mode) |
+| 12 | `12-sandbox-allow-host.ts` | Host-based network filtering |
+| 13 | `13-sandbox-filesystem.ts` | Filesystem path permissions |
+| 14 | `14-sandbox-env.ts` | Environment variable filtering |
 
 ## Running Examples
 
@@ -42,7 +47,37 @@ buns 06-bun-constraint.ts
 buns 07-http-client.ts
 echo '{"name":"test","count":42}' | buns 08-json-processing.ts -- -
 buns 09-cli-app.ts
+
+# Sandbox examples
+buns 10-sandbox-basic.ts --sandbox --memory 64 --timeout 10
+buns 11-sandbox-offline.ts --offline
+buns 12-sandbox-allow-host.ts --allow-host httpbin.org
+echo "hello" > /tmp/buns-test.txt && buns 13-sandbox-filesystem.ts --sandbox --allow-read /tmp --allow-write /tmp
+API_KEY=secret DEBUG=1 buns 14-sandbox-env.ts --sandbox --allow-env API_KEY,DEBUG
 ```
+
+## Security & Sandboxing
+
+buns supports sandboxed execution to restrict script capabilities.
+
+### Sandbox Flags
+
+| Flag | Description |
+|------|-------------|
+| `--sandbox` | Enable sandboxing (restricts filesystem) |
+| `--offline` | Block all network access |
+| `--allow-host` | Allow network to specific hosts |
+| `--allow-read` | Additional readable paths |
+| `--allow-write` | Additional writable paths |
+| `--allow-env` | Environment variables to pass |
+| `--memory` | Memory limit in MB (default: 128) |
+| `--timeout` | Execution timeout in seconds (default: 30) |
+| `--cpu` | CPU time limit in seconds (default: 30) |
+
+### Platform Support
+
+- **macOS**: Uses `sandbox-exec` with custom profiles
+- **Linux**: Uses `bubblewrap` or `nsjail` for full sandbox, `unshare` for network-only
 
 ## Script Metadata
 
@@ -75,6 +110,15 @@ import chalk from "chalk";
 | `--packages` | Add packages (comma-separated) |
 | `-v, --verbose` | Show detailed output |
 | `-q, --quiet` | Suppress buns output |
+| `--sandbox` | Enable sandboxing (restricts filesystem) |
+| `--offline` | Block all network access |
+| `--allow-host` | Allow network to specific hosts |
+| `--allow-read` | Additional readable paths |
+| `--allow-write` | Additional writable paths |
+| `--allow-env` | Environment variables to pass |
+| `--memory` | Memory limit in MB (default: 128) |
+| `--timeout` | Execution timeout in seconds (default: 30) |
+| `--cpu` | CPU time limit in seconds (default: 30) |
 
 ### Examples
 
