@@ -32,7 +32,7 @@ jobs:
       - name: Extract version from changelog
         id: version
         run: |
-          VERSION=$(grep -m1 -oP '(?<=^## \[)[^]]+' CHANGELOG.md)
+          VERSION=$(sed -n 's/^## \[\([^]]*\)\].*/\1/p' CHANGELOG.md | head -1)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Build binary
@@ -61,7 +61,7 @@ jobs:
         id: changelog
         run: |
           # Extract the latest version from CHANGELOG.md (first ## [X.Y.Z] entry)
-          VERSION=$(grep -m1 -oP '(?<=^## \[)[^]]+' CHANGELOG.md)
+          VERSION=$(sed -n 's/^## \[\([^]]*\)\].*/\1/p' CHANGELOG.md | head -1)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
           # Extract content until the next ## or end of file
