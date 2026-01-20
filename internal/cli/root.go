@@ -1,7 +1,15 @@
 package cli
 
 import (
+	"fmt"
+
 	"github.com/spf13/cobra"
+)
+
+var (
+	Version   = "dev"
+	GitCommit = "unknown"
+	BuildTime = "unknown"
 )
 
 const logo = `
@@ -19,8 +27,9 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "buns [script.ts]",
-	Short: "Run TypeScript/JavaScript scripts with inline dependencies",
+	Use:     "buns [script.ts]",
+	Short:   "Run TypeScript/JavaScript scripts with inline dependencies",
+	Version: Version,
 	Long: `buns runs TypeScript/JavaScript scripts with inline npm dependencies
 and automatic Bun version management.
 
@@ -45,6 +54,7 @@ func init() {
 	// Register script execution flags on root command too
 	addRunFlags(rootCmd)
 
+	rootCmd.SetVersionTemplate(fmt.Sprintf("buns %s (commit: %s, built: %s)\n", Version, GitCommit, BuildTime))
 	rootCmd.SetHelpTemplate(logo + `{{with (or .Long .Short)}}{{. | trimTrailingWhitespaces}}
 
 {{end}}{{if or .Runnable .HasSubCommands}}{{.UsageString}}{{end}}`)
