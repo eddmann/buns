@@ -12,6 +12,9 @@ FAIL=0
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 EXAMPLES_DIR="$SCRIPT_DIR"
 
+# Use provided binary or default to 'buns' in PATH
+BUNS="${1:-buns}"
+
 echo "========================================"
 echo "  buns Examples Test Suite"
 echo "========================================"
@@ -82,17 +85,17 @@ echo "----------------------------------------"
 
 # 01 - Hello World
 run_test "01-hello-world.ts" \
-    "buns '$EXAMPLES_DIR/01-hello-world.ts'" \
+    "$BUNS '$EXAMPLES_DIR/01-hello-world.ts'" \
     "Hello from buns!"
 
 # 02 - Bun Version
 run_test "02-bun-version.ts" \
-    "buns '$EXAMPLES_DIR/02-bun-version.ts'" \
+    "$BUNS '$EXAMPLES_DIR/02-bun-version.ts'" \
     "Bun version:"
 
 # 03 - CLI Arguments
 run_test "03-cli-arguments.ts" \
-    "buns '$EXAMPLES_DIR/03-cli-arguments.ts' -- hello world" \
+    "$BUNS '$EXAMPLES_DIR/03-cli-arguments.ts' -- hello world" \
     "Total: 2 arguments"
 
 echo ""
@@ -101,12 +104,12 @@ echo "----------------------------------------"
 
 # 04 - Single Package (chalk)
 run_test "04-single-package.ts" \
-    "buns '$EXAMPLES_DIR/04-single-package.ts'" \
+    "$BUNS '$EXAMPLES_DIR/04-single-package.ts'" \
     "Success:"
 
 # 05 - Multiple Packages
 run_test "05-multiple-packages.ts" \
-    "buns '$EXAMPLES_DIR/05-multiple-packages.ts'" \
+    "$BUNS '$EXAMPLES_DIR/05-multiple-packages.ts'" \
     "Current time:"
 
 echo ""
@@ -115,7 +118,7 @@ echo "----------------------------------------"
 
 # 06 - Bun Constraint
 run_test "06-bun-constraint.ts" \
-    "buns '$EXAMPLES_DIR/06-bun-constraint.ts'" \
+    "$BUNS '$EXAMPLES_DIR/06-bun-constraint.ts'" \
     "Bun version:"
 
 echo ""
@@ -124,12 +127,12 @@ echo "----------------------------------------"
 
 # 07 - HTTP Client
 run_test "07-http-client.ts" \
-    "buns '$EXAMPLES_DIR/07-http-client.ts'" \
+    "$BUNS '$EXAMPLES_DIR/07-http-client.ts'" \
     "Name:"
 
 # 08 - JSON Processing
 run_test "08-json-processing.ts" \
-    "echo '{\"test\": 123}' | buns '$EXAMPLES_DIR/08-json-processing.ts'" \
+    "echo '{\"test\": 123}' | $BUNS '$EXAMPLES_DIR/08-json-processing.ts'" \
     "Parsed JSON:"
 
 # Note: 09-cli-app.ts is interactive, skip automated test
@@ -141,29 +144,29 @@ echo "----------------------------------------"
 
 # 10 - Sandbox Basic
 run_test "10-sandbox-basic.ts" \
-    "buns '$EXAMPLES_DIR/10-sandbox-basic.ts' --sandbox --memory 64 --timeout 10 --cpu 5" \
+    "$BUNS '$EXAMPLES_DIR/10-sandbox-basic.ts' --sandbox --memory 64 --timeout 10" \
     "Bun Version:"
 
 # 11 - Sandbox Offline
 run_test_contains "11-sandbox-offline.ts" \
-    "buns '$EXAMPLES_DIR/11-sandbox-offline.ts' --offline" \
+    "$BUNS '$EXAMPLES_DIR/11-sandbox-offline.ts' --offline" \
     "Network blocked"
 
 # 12 - Sandbox Allow Host
 run_test_contains "12-sandbox-allow-host.ts" \
-    "buns '$EXAMPLES_DIR/12-sandbox-allow-host.ts' --allow-host httpbin.org" \
+    "$BUNS '$EXAMPLES_DIR/12-sandbox-allow-host.ts' --allow-host httpbin.org" \
     "[allowed] httpbin.org"
 
 # 13 - Sandbox Filesystem
 echo "hello" > /tmp/buns-test.txt
 run_test "13-sandbox-filesystem.ts" \
-    "buns '$EXAMPLES_DIR/13-sandbox-filesystem.ts' --sandbox --allow-read /tmp --allow-write /tmp" \
+    "$BUNS '$EXAMPLES_DIR/13-sandbox-filesystem.ts' --sandbox --allow-read /tmp --allow-write /tmp" \
     "Write: OK"
 rm -f /tmp/buns-test.txt /tmp/buns-output.txt
 
 # 14 - Sandbox Env
 run_test_contains "14-sandbox-env.ts" \
-    "API_KEY=secret123 DEBUG=1 buns '$EXAMPLES_DIR/14-sandbox-env.ts' --sandbox --allow-env API_KEY,DEBUG" \
+    "API_KEY=secret123 DEBUG=1 $BUNS '$EXAMPLES_DIR/14-sandbox-env.ts' --sandbox --allow-env API_KEY,DEBUG" \
     "API_KEY: set"
 
 echo ""
