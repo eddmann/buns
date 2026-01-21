@@ -347,6 +347,7 @@
             </a>
             <div class="desktop-nav hidden sm:flex items-center gap-6">
                 <a href="#features" class="text-sm text-bun-cream/70 hover:text-bun-orange transition-colors">Features</a>
+                <a href="#sandbox" class="text-sm text-bun-cream/70 hover:text-bun-orange transition-colors">Sandbox</a>
                 <a href="#install" class="text-sm text-bun-cream/70 hover:text-bun-orange transition-colors">Install</a>
                 <a href="https://github.com/eddmann/buns" class="flex items-center gap-2 text-sm text-bun-cream/70 hover:text-bun-orange transition-colors">
                     <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
@@ -361,6 +362,7 @@
         </div>
         <div id="mobileMenu" class="mobile-menu">
             <a href="#features" onclick="closeMobileMenu()" class="text-sm text-bun-cream/70 hover:text-bun-orange transition-colors">Features</a>
+            <a href="#sandbox" onclick="closeMobileMenu()" class="text-sm text-bun-cream/70 hover:text-bun-orange transition-colors">Sandbox</a>
             <a href="#install" onclick="closeMobileMenu()" class="text-sm text-bun-cream/70 hover:text-bun-orange transition-colors">Install</a>
             <a href="https://github.com/eddmann/buns" class="flex items-center gap-2 text-sm text-bun-cream/70 hover:text-bun-orange transition-colors">
                 <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
@@ -497,6 +499,134 @@ console.<span class="syntax-function">log</span>(<span class="syntax-variable">c
         </div>
     </section>
 
+    <!-- Sandbox Section -->
+    <section id="sandbox" class="relative py-32">
+        <div class="max-w-6xl mx-auto px-6">
+            <!-- Section header -->
+            <div class="text-center mb-16">
+                <h2 class="font-display text-3xl md:text-5xl font-bold mb-4">
+                    Secure by <span class="text-bun-orange">Design</span>
+                </h2>
+                <p class="text-bun-cream/60 text-lg max-w-xl mx-auto">
+                    Run untrusted scripts safely with built-in sandboxing. Control filesystem access, network, and resource limits.
+                </p>
+            </div>
+
+            <!-- Three feature highlights -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                <!-- Filesystem -->
+                <div class="feature-card rounded-2xl p-8 text-center">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-bun-orange/20 to-bun-flame/10 flex items-center justify-center mb-6 mx-auto">
+                        <svg class="w-6 h-6 text-bun-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                    <h3 class="font-display text-xl font-semibold mb-3">Filesystem Isolation</h3>
+                    <p class="text-bun-cream/60 leading-relaxed">Restrict read and write access to only the paths your scripts need</p>
+                </div>
+
+                <!-- Network -->
+                <div class="feature-card rounded-2xl p-8 text-center">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-bun-orange/20 to-bun-flame/10 flex items-center justify-center mb-6 mx-auto">
+                        <svg class="w-6 h-6 text-bun-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <h3 class="font-display text-xl font-semibold mb-3">Network Control</h3>
+                    <p class="text-bun-cream/60 leading-relaxed">Block all network access or allow only specific hosts with wildcards</p>
+                </div>
+
+                <!-- Resources -->
+                <div class="feature-card rounded-2xl p-8 text-center">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-bun-orange/20 to-bun-flame/10 flex items-center justify-center mb-6 mx-auto">
+                        <svg class="w-6 h-6 text-bun-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <h3 class="font-display text-xl font-semibold mb-3">Resource Limits</h3>
+                    <p class="text-bun-cream/60 leading-relaxed">Set memory, CPU time, and execution timeout limits per script</p>
+                </div>
+            </div>
+
+            <!-- Tabbed examples -->
+            <div class="max-w-2xl mx-auto">
+                <!-- Tab buttons -->
+                <div class="flex justify-center gap-2 mb-4">
+                    <button onclick="showSandboxTab('filesystem')" class="install-tab active px-4 py-2 text-sm font-medium rounded-lg border border-transparent transition-all" data-sandbox-tab="filesystem">
+                        Filesystem
+                    </button>
+                    <button onclick="showSandboxTab('network')" class="install-tab px-4 py-2 text-sm font-medium rounded-lg border border-transparent transition-all" data-sandbox-tab="network">
+                        Network
+                    </button>
+                    <button onclick="showSandboxTab('resources')" class="install-tab px-4 py-2 text-sm font-medium rounded-lg border border-transparent transition-all" data-sandbox-tab="resources">
+                        Resources
+                    </button>
+                </div>
+
+                <!-- Tab content -->
+                <div class="code-block rounded-xl">
+                    <!-- Filesystem -->
+                    <div id="sandbox-tab-filesystem" class="sandbox-content p-6">
+                        <div class="font-mono text-sm md:text-base overflow-x-auto">
+                            <div class="whitespace-nowrap">
+                                <span class="text-bun-muted">$</span>
+                                <span class="text-bun-cream/90"> buns script.ts</span>
+                                <span class="text-bun-orange"> --sandbox</span>
+                                <span class="text-bun-orange"> --allow-read</span>
+                                <span class="text-bun-cream/80"> /data</span>
+                                <span class="text-bun-orange"> --allow-write</span>
+                                <span class="text-bun-cream/80"> /tmp</span>
+                            </div>
+                        </div>
+                        <p class="text-sm text-bun-muted mt-4">
+                            Uses <span class="text-bun-cream/70">sandbox-exec</span> on macOS, <span class="text-bun-cream/70">bubblewrap</span> on Linux
+                        </p>
+                    </div>
+
+                    <!-- Network -->
+                    <div id="sandbox-tab-network" class="sandbox-content p-6 hidden">
+                        <div class="font-mono text-sm md:text-base overflow-x-auto space-y-2">
+                            <div class="whitespace-nowrap">
+                                <span class="text-bun-muted">$</span>
+                                <span class="text-bun-cream/90"> buns script.ts</span>
+                                <span class="text-bun-orange"> --offline</span>
+                                <span class="text-bun-muted"># Block all network</span>
+                            </div>
+                            <div class="whitespace-nowrap">
+                                <span class="text-bun-muted">$</span>
+                                <span class="text-bun-cream/90"> buns script.ts</span>
+                                <span class="text-bun-orange"> --allow-host</span>
+                                <span class="text-bun-cream/80"> api.example.com,*.github.com</span>
+                            </div>
+                        </div>
+                        <p class="text-sm text-bun-muted mt-4">
+                            Proxy-based filtering with wildcard support
+                        </p>
+                    </div>
+
+                    <!-- Resources -->
+                    <div id="sandbox-tab-resources" class="sandbox-content p-6 hidden">
+                        <div class="font-mono text-sm md:text-base overflow-x-auto">
+                            <div class="whitespace-nowrap">
+                                <span class="text-bun-muted">$</span>
+                                <span class="text-bun-cream/90"> buns script.ts</span>
+                                <span class="text-bun-orange"> --memory</span>
+                                <span class="text-bun-cream/80"> 64</span>
+                                <span class="text-bun-orange"> --timeout</span>
+                                <span class="text-bun-cream/80"> 10</span>
+                                <span class="text-bun-orange"> --cpu</span>
+                                <span class="text-bun-cream/80"> 5</span>
+                            </div>
+                        </div>
+                        <p class="text-sm text-bun-muted mt-4">
+                            Memory in MB, timeout in seconds. CPU limits require nsjail (Linux)
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Installation -->
     <section id="install" class="relative py-32 bg-gradient-to-b from-transparent via-bun-warm/30 to-transparent">
         <div class="max-w-4xl mx-auto px-6">
@@ -623,6 +753,17 @@ console.<span class="syntax-function">log</span>(<span class="syntax-variable">c
             const hamburger = document.querySelector('.hamburger');
             menu.classList.remove('open');
             hamburger.classList.remove('open');
+        }
+
+        // Sandbox tab switching
+        function showSandboxTab(tab) {
+            // Hide all sandbox tab contents
+            document.querySelectorAll('.sandbox-content').forEach(el => el.classList.add('hidden'));
+            // Show selected tab
+            document.getElementById('sandbox-tab-' + tab).classList.remove('hidden');
+            // Update tab button states
+            document.querySelectorAll('[data-sandbox-tab]').forEach(el => el.classList.remove('active'));
+            document.querySelector('[data-sandbox-tab="' + tab + '"]').classList.add('active');
         }
 
         // Smooth scroll for anchor links
