@@ -27,12 +27,6 @@ case "$ARCH" in
         ;;
 esac
 
-# Linux only supports x64
-if [ "$OS" = "linux" ] && [ "$ARCH" = "arm64" ]; then
-    echo "Linux arm64 is not currently supported"
-    exit 1
-fi
-
 ARTIFACT="${BINARY}-${OS}-${ARCH}"
 DOWNLOAD_URL="https://github.com/${REPO}/releases/latest/download/${ARTIFACT}"
 

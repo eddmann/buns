@@ -14,6 +14,9 @@ jobs:
             artifact: buns-macos-x64
           - os: ubuntu-latest
             artifact: buns-linux-x64
+          - os: ubuntu-latest
+            artifact: buns-linux-arm64
+            goarch: arm64
 
     runs-on: ${{ matrix.os }}
 
@@ -37,6 +40,8 @@ jobs:
 
       - name: Build binary
         run: make build-release VERSION=${{ steps.version.outputs.version }}
+        env:
+          GOARCH: ${{ matrix.goarch }}
 
       - name: Rename binary
         run: mv bin/buns bin/${{ matrix.artifact }}
