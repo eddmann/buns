@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-05-21
+
+### Added
+
+- Added `--typecheck` for `buns run` and the `buns <script.ts>` shorthand to run TypeScript checking before execution
+- Added isolated typecheck dependency caches under `~/.buns/typecheck`
+- Added `buns cache list` visibility and `buns cache clean --typecheck` support for typecheck caches
+- Added a typechecking example that validates external package types
+
+### Fixed
+
+- Fixed macOS sandbox execution with Bun 1.3.14+ by allowing Bun to read system ICU data required at startup
+
 ## [0.0.6] - 2026-02-06
 
 ### Added
@@ -50,6 +63,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI/CD workflows and installation scripts
 - GitHub Pages documentation site
 
+[1.0.0]: https://github.com/eddmann/buns/compare/v0.0.6...v1.0.0
 [0.0.6]: https://github.com/eddmann/buns/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/eddmann/buns/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/eddmann/buns/compare/v0.0.3...v0.0.4
