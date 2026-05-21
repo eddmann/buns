@@ -3,7 +3,10 @@ package exec
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/eddmann/buns/internal/cache"
 )
 
 func TestParsePackageSpec(t *testing.T) {
@@ -216,6 +219,163 @@ echo "$NODE_PATH" > "` + outputFile + `"
 	expectedNodePath := filepath.Join(depsDir, "node_modules")
 	if string(content) != expectedNodePath+"\n" {
 		t.Errorf("NODE_PATH = %q, want %q", string(content), expectedNodePath+"\n")
+	}
+}
+
+func TestBuildTypeCheckPackages(t *testing.T) {
+	packages := []string{"zod@^3.0", "chalk@^5.0"}
+
+	t.Run("pins bun types to resolved bun version", func(t *testing.T) {
+		got := buildTypeCheckPackages(packages, "1.3.13", true)
+		want := []string{"zod@^3.0", "chalk@^5.0", typeScriptPackage, "@types/bun@1.3.13"}
+
+		if strings.Join(got, "\n") != strings.Join(want, "\n") {
+			t.Errorf("packages = %v, want %v", got, want)
+		}
+	})
+
+	t.Run("falls back to latest bun types", func(t *testing.T) {
+		got := buildTypeCheckPackages(packages, "1.3.13", false)
+		want := []string{"zod@^3.0", "chalk@^5.0", typeScriptPackage, "@types/bun"}
+
+		if strings.Join(got, "\n") != strings.Join(want, "\n") {
+			t.Errorf("packages = %v, want %v", got, want)
+		}
+	})
+}
+
+func TestBuildTypeCheckConfig(t *testing.T) {
+	config := buildTypeCheckConfig("/tmp/script.ts", "/tmp/typecheck")
+	options := config.CompilerOptions
+
+	if len(config.Files) != 1 || config.Files[0] != "/tmp/script.ts" {
+		t.Errorf("files = %v, want script path", config.Files)
+	}
+	if !options.NoEmit {
+		t.Error("noEmit should be enabled")
+	}
+	if !options.Strict {
+		t.Error("strict should be enabled")
+	}
+	if options.Module != "Preserve" {
+		t.Errorf("module = %q, want Preserve", options.Module)
+	}
+	if options.ModuleResolution != "bundler" {
+		t.Errorf("moduleResolution = %q, want bundler", options.ModuleResolution)
+	}
+	if len(options.Types) != 1 || options.Types[0] != "bun" {
+		t.Errorf("types = %v, want [bun]", options.Types)
+	}
+	if options.BaseURL != "/tmp/typecheck" {
+		t.Errorf("baseUrl = %q, want /tmp/typecheck", options.BaseURL)
+	}
+	if got := options.Paths["*"][0]; got != "node_modules/*" {
+		t.Errorf("paths[*][0] = %q, want node_modules/*", got)
+	}
+}
+
+func TestRunTypeCheckReturnsExitCode(t *testing.T) {
+	tmpDir := t.TempDir()
+	typeCheckDir := filepath.Join(tmpDir, "typecheck")
+	tscPath := filepath.Join(typeCheckDir, "node_modules", "typescript", "lib", "tsc.js")
+	if err := os.MkdirAll(filepath.Dir(tscPath), 0755); err != nil {
+		t.Fatalf("failed to create fake tsc dir: %v", err)
+	}
+	if err := os.WriteFile(tscPath, []byte("console.log('fake tsc')\n"), 0644); err != nil {
+		t.Fatalf("failed to write fake tsc: %v", err)
+	}
+
+	argsFile := filepath.Join(tmpDir, "args.txt")
+	fakeBun := filepath.Join(tmpDir, "fakebun")
+	script := `#!/bin/sh
+printf '%s\n' "$@" > "` + argsFile + `"
+exit 2
+`
+	if err := os.WriteFile(fakeBun, []byte(script), 0755); err != nil {
+		t.Fatalf("failed to write fake bun: %v", err)
+	}
+
+	r := &Runner{verbose: false, quiet: true}
+	exitCode, err := r.runTypeCheck(fakeBun, typeCheckDir, filepath.Join(tmpDir, "tsconfig.json"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if exitCode != 2 {
+		t.Errorf("exit code = %d, want 2", exitCode)
+	}
+
+	args, err := os.ReadFile(argsFile)
+	if err != nil {
+		t.Fatalf("failed to read fake bun args: %v", err)
+	}
+	if !strings.Contains(string(args), "node_modules/typescript/lib/tsc.js") {
+		t.Errorf("args = %q, want tsc.js path", string(args))
+	}
+}
+
+func TestTypeCheckScriptInstallsTypecheckDepsAndRunsTSC(t *testing.T) {
+	tmpDir := t.TempDir()
+	argsFile := filepath.Join(tmpDir, "tsc-args.txt")
+	t.Setenv("TSC_ARGS_FILE", argsFile)
+	t.Setenv("TSC_EXIT_CODE", "2")
+
+	fakeBun := filepath.Join(tmpDir, "fakebun")
+	fakeBunScript := `#!/bin/sh
+if [ "$1" = "install" ]; then
+	mkdir -p node_modules/typescript/lib node_modules/installed
+	printf 'fake tsc\n' > node_modules/typescript/lib/tsc.js
+	exit 0
+fi
+case "$1" in
+	*/node_modules/typescript/lib/tsc.js)
+		printf '%s\n' "$@" > "$TSC_ARGS_FILE"
+		exit "$TSC_EXIT_CODE"
+		;;
+esac
+exit 99
+`
+	if err := os.WriteFile(fakeBun, []byte(fakeBunScript), 0755); err != nil {
+		t.Fatalf("failed to write fake bun: %v", err)
+	}
+
+	scriptPath := filepath.Join(tmpDir, "script.ts")
+	if err := os.WriteFile(scriptPath, []byte("console.log(Bun.version)\n"), 0644); err != nil {
+		t.Fatalf("failed to write script: %v", err)
+	}
+
+	c := cache.New(filepath.Join(tmpDir, "cache"))
+	r := &Runner{cache: c, verbose: false, quiet: true}
+	packages := []string{"zod@^3.0"}
+	exitCode, err := r.typeCheckScript(fakeBun, scriptPath, packages, "1.3.13")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if exitCode != 2 {
+		t.Errorf("exit code = %d, want 2", exitCode)
+	}
+
+	args, err := os.ReadFile(argsFile)
+	if err != nil {
+		t.Fatalf("failed to read tsc args: %v", err)
+	}
+	argsText := string(args)
+	for _, expectedArg := range []string{"--project", "--pretty", "--noErrorTruncation"} {
+		if !strings.Contains(argsText, expectedArg) {
+			t.Errorf("tsc args = %q, want %s", argsText, expectedArg)
+		}
+	}
+
+	typeCheckPackages := buildTypeCheckPackages(packages, "1.3.13", true)
+	typeCheckDir := c.TypecheckDirForHash(cache.HashPackages(typeCheckPackages))
+	packageJSON, err := os.ReadFile(filepath.Join(typeCheckDir, "package.json"))
+	if err != nil {
+		t.Fatalf("failed to read typecheck package.json: %v", err)
+	}
+	packageJSONText := string(packageJSON)
+	for _, expected := range []string{"zod", "typescript", "@types/bun"} {
+		if !strings.Contains(packageJSONText, expected) {
+			t.Errorf("package.json missing %q: %s", expected, packageJSONText)
+		}
 	}
 }
 

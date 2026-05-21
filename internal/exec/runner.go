@@ -41,21 +41,22 @@ func NewRunner(c *cache.Cache, verbose, quiet bool) *Runner {
 
 // RunOptions contains options for running a script
 type RunOptions struct {
-	Script         string
-	Args           []string
-	BunConstraint  string   // Override bun version from CLI
-	ExtraPackages  []string // Additional packages from CLI
+	Script        string
+	Args          []string
+	BunConstraint string   // Override bun version from CLI
+	ExtraPackages []string // Additional packages from CLI
+	TypeCheck     bool     // Run TypeScript type checking before execution
 
 	// Sandbox options
-	Sandbox        sandbox.Sandbox // Sandbox instance (set by CLI)
-	Network        bool            // Whether network is enabled
-	AllowHosts     []string        // Allowed hosts for network access
-	AllowRead      []string        // Additional readable paths
-	AllowWrite     []string        // Additional writable paths
-	AllowEnv       []string        // Environment variables to pass through
-	MemoryMB       int             // Memory limit in MB
-	TimeoutSecs    int             // Execution timeout in seconds
-	CPUSeconds     int             // CPU time limit in seconds
+	Sandbox     sandbox.Sandbox // Sandbox instance (set by CLI)
+	Network     bool            // Whether network is enabled
+	AllowHosts  []string        // Allowed hosts for network access
+	AllowRead   []string        // Additional readable paths
+	AllowWrite  []string        // Additional writable paths
+	AllowEnv    []string        // Environment variables to pass through
+	MemoryMB    int             // Memory limit in MB
+	TimeoutSecs int             // Execution timeout in seconds
+	CPUSeconds  int             // CPU time limit in seconds
 }
 
 // Run executes a script with its dependencies
@@ -151,6 +152,16 @@ func (r *Runner) Run(opts RunOptions) (int, error) {
 				return 1, fmt.Errorf("failed to install dependencies: %w", err)
 			}
 			r.log("Dependencies installed")
+		}
+	}
+
+	if opts.TypeCheck {
+		exitCode, err := r.typeCheckScript(bunPath, scriptPath, packages, version.Original())
+		if err != nil {
+			return 1, err
+		}
+		if exitCode != 0 {
+			return exitCode, nil
 		}
 	}
 
@@ -258,6 +269,173 @@ func (r *Runner) execScriptSandboxed(bunPath, scriptPath string, opts RunOptions
 
 	r.log("Exit code: %d", result.ExitCode)
 	return result.ExitCode, nil
+}
+
+const (
+	typeScriptPackage = "typescript@^5.9"
+	bunTypesPackage   = "@types/bun"
+)
+
+type typeCheckConfig struct {
+	CompilerOptions typeCheckCompilerOptions `json:"compilerOptions"`
+	Files           []string                 `json:"files"`
+}
+
+type typeCheckCompilerOptions struct {
+	Lib                        []string            `json:"lib"`
+	Target                     string              `json:"target"`
+	Module                     string              `json:"module"`
+	ModuleDetection            string              `json:"moduleDetection"`
+	ModuleResolution           string              `json:"moduleResolution"`
+	AllowJS                    bool                `json:"allowJs"`
+	AllowImportingTSExtensions bool                `json:"allowImportingTsExtensions"`
+	VerbatimModuleSyntax       bool                `json:"verbatimModuleSyntax"`
+	NoEmit                     bool                `json:"noEmit"`
+	Strict                     bool                `json:"strict"`
+	SkipLibCheck               bool                `json:"skipLibCheck"`
+	Types                      []string            `json:"types"`
+	TypeRoots                  []string            `json:"typeRoots"`
+	BaseURL                    string              `json:"baseUrl"`
+	Paths                      map[string][]string `json:"paths"`
+}
+
+func (r *Runner) typeCheckScript(bunPath, scriptPath string, packages []string, bunVersion string) (int, error) {
+	r.log("Typechecking script...")
+
+	typeCheckPackages := buildTypeCheckPackages(packages, bunVersion, true)
+	typeCheckDir, err := r.ensureTypeCheckDeps(bunPath, typeCheckPackages)
+	if err != nil {
+		r.log("Warning: failed to install %s@%s, falling back to latest %s: %v", bunTypesPackage, bunVersion, bunTypesPackage, err)
+
+		fallbackPackages := buildTypeCheckPackages(packages, bunVersion, false)
+		var fallbackErr error
+		typeCheckDir, fallbackErr = r.ensureTypeCheckDeps(bunPath, fallbackPackages)
+		if fallbackErr != nil {
+			return 1, fmt.Errorf("failed to install typecheck dependencies: %v; fallback failed: %w", err, fallbackErr)
+		}
+	}
+
+	configPath, err := writeTypeCheckConfig(scriptPath, typeCheckDir)
+	if err != nil {
+		return 1, err
+	}
+	defer func() { _ = os.Remove(configPath) }()
+
+	exitCode, err := r.runTypeCheck(bunPath, typeCheckDir, configPath)
+	if err != nil {
+		return 1, err
+	}
+
+	if exitCode == 0 {
+		r.log("Typecheck passed")
+	} else if !r.quiet {
+		fmt.Fprintln(os.Stderr, "[buns] Typecheck failed; script was not executed.")
+	}
+
+	return exitCode, nil
+}
+
+func buildTypeCheckPackages(packages []string, bunVersion string, pinBunTypes bool) []string {
+	result := make([]string, 0, len(packages)+2)
+	result = append(result, packages...)
+	result = append(result, typeScriptPackage)
+
+	if pinBunTypes && bunVersion != "" {
+		result = append(result, fmt.Sprintf("%s@%s", bunTypesPackage, bunVersion))
+	} else {
+		result = append(result, bunTypesPackage)
+	}
+
+	return result
+}
+
+func (r *Runner) ensureTypeCheckDeps(bunPath string, packages []string) (string, error) {
+	hash := cache.HashPackages(packages)
+	typeCheckDir := r.cache.TypecheckDirForHash(hash)
+
+	r.log("Typecheck dependencies hash: %s", hash[:12]+"...")
+
+	if cache.IsPackageInstallHit(typeCheckDir) {
+		r.log("Typecheck cache hit: %s", typeCheckDir)
+		return typeCheckDir, nil
+	}
+
+	r.log("Typecheck cache miss: %s", typeCheckDir)
+	if err := os.RemoveAll(typeCheckDir); err != nil {
+		return "", err
+	}
+	if err := r.installDeps(bunPath, typeCheckDir, packages); err != nil {
+		_ = os.RemoveAll(typeCheckDir)
+		return "", err
+	}
+
+	r.log("Typecheck dependencies installed")
+	return typeCheckDir, nil
+}
+
+func buildTypeCheckConfig(scriptPath, typeCheckDir string) typeCheckConfig {
+	nodeModules := filepath.Join(typeCheckDir, "node_modules")
+
+	return typeCheckConfig{
+		CompilerOptions: typeCheckCompilerOptions{
+			Lib:                        []string{"ESNext"},
+			Target:                     "ESNext",
+			Module:                     "Preserve",
+			ModuleDetection:            "force",
+			ModuleResolution:           "bundler",
+			AllowJS:                    true,
+			AllowImportingTSExtensions: true,
+			VerbatimModuleSyntax:       true,
+			NoEmit:                     true,
+			Strict:                     true,
+			SkipLibCheck:               true,
+			Types:                      []string{"bun"},
+			TypeRoots:                  []string{filepath.Join(nodeModules, "@types")},
+			BaseURL:                    typeCheckDir,
+			Paths: map[string][]string{
+				"*": []string{"node_modules/*"},
+			},
+		},
+		Files: []string{scriptPath},
+	}
+}
+
+func writeTypeCheckConfig(scriptPath, typeCheckDir string) (string, error) {
+	config := buildTypeCheckConfig(scriptPath, typeCheckDir)
+
+	configBytes, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return "", err
+	}
+
+	configFile, err := os.CreateTemp("", "buns-tsconfig-*.json")
+	if err != nil {
+		return "", fmt.Errorf("failed to create typecheck config: %w", err)
+	}
+	defer func() { _ = configFile.Close() }()
+
+	if _, err := configFile.Write(configBytes); err != nil {
+		_ = os.Remove(configFile.Name())
+		return "", fmt.Errorf("failed to write typecheck config: %w", err)
+	}
+
+	return configFile.Name(), nil
+}
+
+func (r *Runner) runTypeCheck(bunPath, typeCheckDir, configPath string) (int, error) {
+	tscPath := filepath.Join(typeCheckDir, "node_modules", "typescript", "lib", "tsc.js")
+	cmd := exec.Command(bunPath, tscPath, "--project", configPath, "--pretty", "--noErrorTruncation")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return exitErr.ExitCode(), nil
+		}
+		return 1, err
+	}
+
+	return 0, nil
 }
 
 // installDeps installs packages to the deps directory

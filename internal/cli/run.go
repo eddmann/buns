@@ -15,6 +15,7 @@ import (
 var (
 	bunVersion  string
 	packagesArg string
+	typeCheck   bool
 
 	// Sandbox flags
 	sandboxEnabled bool
@@ -69,6 +70,7 @@ func init() {
 func addRunFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&bunVersion, "bun", "", "bun version constraint (overrides script)")
 	cmd.Flags().StringVar(&packagesArg, "packages", "", "comma-separated packages to add")
+	cmd.Flags().BoolVar(&typeCheck, "typecheck", false, "run TypeScript type checking before execution")
 
 	// Sandbox flags
 	cmd.Flags().BoolVar(&sandboxEnabled, "sandbox", false, "enable sandboxing")
@@ -150,6 +152,7 @@ func runScript(script string, args []string) error {
 		Args:          args,
 		BunConstraint: bunVersion,
 		ExtraPackages: extraPackages,
+		TypeCheck:     typeCheck,
 
 		// Sandbox options
 		Sandbox:     sb,

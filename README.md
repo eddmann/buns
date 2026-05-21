@@ -128,21 +128,27 @@ buns run <script.ts> [-- args...]
 buns <script.ts> [-- args...]  # Shorthand
 ```
 
-| Flag           | Short | Description                               |
-| -------------- | ----- | ----------------------------------------- |
-| `--bun`        |       | Bun version constraint (overrides script) |
-| `--packages`   |       | Comma-separated packages to add           |
-| `--verbose`    | `-v`  | Show detailed output                      |
-| `--quiet`      | `-q`  | Suppress buns output                      |
-| `--sandbox`    |       | Enable sandboxing (restricts filesystem)  |
-| `--offline`    |       | Block all network access                  |
-| `--allow-host` |       | Allow network to specific hosts           |
-| `--allow-read` |       | Additional readable paths                 |
-| `--allow-write`|       | Additional writable paths                 |
-| `--allow-env`  |       | Environment variables to pass             |
-| `--memory`     |       | Memory limit in MB (default: 128)                   |
-| `--timeout`    |       | Execution timeout in seconds (default: 30)          |
-| `--cpu`        |       | CPU time limit in seconds, Linux only (default: 30) |
+| Flag            | Short | Description                                         |
+| --------------- | ----- | --------------------------------------------------- |
+| `--bun`         |       | Bun version constraint (overrides script)           |
+| `--packages`    |       | Comma-separated packages to add                     |
+| `--typecheck`   |       | Run TypeScript type checking before execution       |
+| `--verbose`     | `-v`  | Show detailed output                                |
+| `--quiet`       | `-q`  | Suppress buns output                                |
+| `--sandbox`     |       | Enable sandboxing (restricts filesystem)            |
+| `--offline`     |       | Block all network access                            |
+| `--allow-host`  |       | Allow network to specific hosts                     |
+| `--allow-read`  |       | Additional readable paths                           |
+| `--allow-write` |       | Additional writable paths                           |
+| `--allow-env`   |       | Environment variables to pass                       |
+| `--memory`      |       | Memory limit in MB (default: 128)                   |
+| `--timeout`     |       | Execution timeout in seconds (default: 30)          |
+| `--cpu`         |       | CPU time limit in seconds, Linux only (default: 30) |
+
+Use `--typecheck` to run `tsc --noEmit` before execution. Bun strips TypeScript
+syntax at runtime but does not perform semantic type checking, so this flag
+installs TypeScript and Bun type definitions in a separate cache and stops before
+execution if the checker reports errors.
 
 ### buns cache
 
@@ -152,7 +158,8 @@ Manage the buns cache.
 buns cache list              # Show cached items
 buns cache clean             # Remove dependency cache (default)
 buns cache clean --bun       # Remove Bun binaries
-buns cache clean --deps      # Remove dependencies
+buns cache clean --deps      # Remove runtime dependencies
+buns cache clean --typecheck # Remove typecheck dependencies
 buns cache clean --index     # Remove version index
 buns cache clean --all       # Remove everything
 buns cache dir               # Print cache path
@@ -187,12 +194,14 @@ See [examples/README.md](examples/README.md) for the complete list and detailed 
 ```
 Script → Parse metadata → Resolve Bun version → Download Bun (if needed)
                                               → Install dependencies (if needed)
+                                              → Typecheck script (if requested)
                                               → Execute script
 ```
 
 **Bun binaries** are downloaded from [oven-sh/bun releases](https://github.com/oven-sh/bun/releases) - official pre-built binaries for all platforms.
 
 **Dependencies** are installed via Bun into content-addressed cache directories at `~/.buns/deps/{hash}/`.
+Typecheck dependencies are kept separately at `~/.buns/typecheck/{hash}/`.
 
 ## Cache Structure
 
@@ -200,6 +209,7 @@ Script → Parse metadata → Resolve Bun version → Download Bun (if needed)
 ~/.buns/
 ├── bun/{version}/bun     # Bun binaries
 ├── deps/{hash}/          # Script dependencies (node_modules)
+├── typecheck/{hash}/     # Typecheck dependencies (typescript, @types/bun, script deps)
 └── index/                # Version index (24h TTL)
 ```
 
@@ -228,6 +238,7 @@ buns script.ts --sandbox --memory 64 --timeout 10 --cpu 5
 | `--cpu`     | 30      | CPU time limit (seconds, Linux only) |
 
 Resource enforcement depends on available tooling:
+
 - **nsjail** (Linux): Hard memory and CPU limits enforced via cgroups
 - **bubblewrap** (Linux): Timeout and basic isolation
 - **macOS/fallback**: `--memory` sets `BUN_JSC_forceRAMSize` as a GC hint; `--cpu` has no effect

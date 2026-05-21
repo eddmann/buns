@@ -44,6 +44,11 @@ func (c *Cache) DepsDir() string {
 	return filepath.Join(c.baseDir, "deps")
 }
 
+// TypecheckDir returns the directory for typecheck dependencies
+func (c *Cache) TypecheckDir() string {
+	return filepath.Join(c.baseDir, "typecheck")
+}
+
 // IndexDir returns the directory for cached index data
 func (c *Cache) IndexDir() string {
 	return filepath.Join(c.baseDir, "index")
@@ -52,6 +57,11 @@ func (c *Cache) IndexDir() string {
 // DepsDirForHash returns the directory for a specific dependency hash
 func (c *Cache) DepsDirForHash(hash string) string {
 	return filepath.Join(c.DepsDir(), hash)
+}
+
+// TypecheckDirForHash returns the directory for a specific typecheck dependency hash
+func (c *Cache) TypecheckDirForHash(hash string) string {
+	return filepath.Join(c.TypecheckDir(), hash)
 }
 
 // HashPackages creates a cache key from a list of packages
@@ -72,7 +82,12 @@ func HashPackages(packages []string) string {
 
 // IsDepsHit checks if dependencies are cached for the given hash
 func (c *Cache) IsDepsHit(hash string) bool {
-	nodeModules := filepath.Join(c.DepsDirForHash(hash), "node_modules")
+	return IsPackageInstallHit(c.DepsDirForHash(hash))
+}
+
+// IsPackageInstallHit checks if a dependency directory contains installed packages
+func IsPackageInstallHit(dir string) bool {
+	nodeModules := filepath.Join(dir, "node_modules")
 	info, err := os.Stat(nodeModules)
 	if err != nil {
 		return false
@@ -94,6 +109,7 @@ func (c *Cache) EnsureDirs() error {
 	dirs := []string{
 		c.BunDir(),
 		c.DepsDir(),
+		c.TypecheckDir(),
 		c.IndexDir(),
 	}
 
@@ -114,6 +130,11 @@ func (c *Cache) CleanBun() error {
 // CleanDeps removes all cached dependencies
 func (c *Cache) CleanDeps() error {
 	return os.RemoveAll(c.DepsDir())
+}
+
+// CleanTypecheck removes all cached typecheck dependencies
+func (c *Cache) CleanTypecheck() error {
+	return os.RemoveAll(c.TypecheckDir())
 }
 
 // CleanIndex removes the cached index
@@ -147,7 +168,16 @@ func (c *Cache) ListBunVersions() ([]string, error) {
 
 // ListDepsHashes returns all cached dependency hashes
 func (c *Cache) ListDepsHashes() ([]string, error) {
-	entries, err := os.ReadDir(c.DepsDir())
+	return listDirNames(c.DepsDir())
+}
+
+// ListTypecheckHashes returns all cached typecheck dependency hashes
+func (c *Cache) ListTypecheckHashes() ([]string, error) {
+	return listDirNames(c.TypecheckDir())
+}
+
+func listDirNames(dir string) ([]string, error) {
+	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil

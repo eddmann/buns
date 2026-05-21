@@ -82,6 +82,10 @@ func TestCache_Paths(t *testing.T) {
 		t.Errorf("unexpected deps dir: %s", c.DepsDir())
 	}
 
+	if c.TypecheckDir() != "/tmp/test-buns/typecheck" {
+		t.Errorf("unexpected typecheck dir: %s", c.TypecheckDir())
+	}
+
 	if c.IndexDir() != "/tmp/test-buns/index" {
 		t.Errorf("unexpected index dir: %s", c.IndexDir())
 	}
@@ -89,6 +93,10 @@ func TestCache_Paths(t *testing.T) {
 	hash := "abc123"
 	if c.DepsDirForHash(hash) != "/tmp/test-buns/deps/abc123" {
 		t.Errorf("unexpected deps hash dir: %s", c.DepsDirForHash(hash))
+	}
+
+	if c.TypecheckDirForHash(hash) != "/tmp/test-buns/typecheck/abc123" {
+		t.Errorf("unexpected typecheck hash dir: %s", c.TypecheckDirForHash(hash))
 	}
 }
 
@@ -137,7 +145,7 @@ func TestCache_EnsureDirs(t *testing.T) {
 	}
 
 	// Check directories exist
-	dirs := []string{c.BunDir(), c.DepsDir(), c.IndexDir()}
+	dirs := []string{c.BunDir(), c.DepsDir(), c.TypecheckDir(), c.IndexDir()}
 	for _, dir := range dirs {
 		info, err := os.Stat(dir)
 		if err != nil {
@@ -158,6 +166,7 @@ func TestCache_Clean(t *testing.T) {
 	// Create some files
 	os.WriteFile(filepath.Join(c.BunDir(), "test"), []byte("test"), 0644)
 	os.WriteFile(filepath.Join(c.DepsDir(), "test"), []byte("test"), 0644)
+	os.WriteFile(filepath.Join(c.TypecheckDir(), "test"), []byte("test"), 0644)
 	os.WriteFile(filepath.Join(c.IndexDir(), "test"), []byte("test"), 0644)
 
 	t.Run("CleanBun", func(t *testing.T) {
@@ -171,6 +180,13 @@ func TestCache_Clean(t *testing.T) {
 		c.CleanDeps()
 		if _, err := os.Stat(c.DepsDir()); !os.IsNotExist(err) {
 			t.Error("deps dir should be removed")
+		}
+	})
+
+	t.Run("CleanTypecheck", func(t *testing.T) {
+		c.CleanTypecheck()
+		if _, err := os.Stat(c.TypecheckDir()); !os.IsNotExist(err) {
+			t.Error("typecheck dir should be removed")
 		}
 	})
 

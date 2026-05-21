@@ -13,6 +13,7 @@ import (
 var (
 	cleanBun   bool
 	cleanDeps  bool
+	cleanTypes bool
 	cleanIndex bool
 	cleanAll   bool
 )
@@ -20,7 +21,7 @@ var (
 var cacheCmd = &cobra.Command{
 	Use:   "cache",
 	Short: "Manage the buns cache",
-	Long:  `Manage cached Bun binaries, dependencies, and index data.`,
+	Long:  `Manage cached Bun binaries, dependencies, typecheck dependencies, and index data.`,
 }
 
 var cacheListCmd = &cobra.Command{
@@ -54,18 +55,15 @@ var cacheListCmd = &cobra.Command{
 		}
 
 		fmt.Println("\nDependency caches:")
-		if len(hashes) == 0 {
-			fmt.Println("  (none)")
-		} else {
-			for _, h := range hashes {
-				// Truncate hash for display
-				display := h
-				if len(h) > 12 {
-					display = h[:12] + "..."
-				}
-				fmt.Printf("  %s\n", display)
-			}
+		printHashes(hashes)
+
+		typeHashes, err := c.ListTypecheckHashes()
+		if err != nil && !os.IsNotExist(err) {
+			return err
 		}
+
+		fmt.Println("\nTypecheck caches:")
+		printHashes(typeHashes)
 
 		// Index age
 		fmt.Println("\nIndex cache:")
@@ -95,11 +93,12 @@ var cacheCleanCmd = &cobra.Command{
 	Short: "Remove cached data",
 	Long: `Remove cached data. By default, removes dependency caches.
 
-Use flags to specify what to clean:
-  --bun    Remove Bun binaries
-  --deps   Remove dependencies (default)
-  --index  Remove index cache
-  --all    Remove everything`,
+	Use flags to specify what to clean:
+	  --bun        Remove Bun binaries
+	  --deps       Remove runtime dependencies (default)
+	  --typecheck  Remove typecheck dependencies
+	  --index      Remove index cache
+	  --all        Remove everything`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		c, err := cache.Default()
 		if err != nil {
@@ -107,7 +106,7 @@ Use flags to specify what to clean:
 		}
 
 		// Default to cleaning deps if no flags specified
-		if !cleanBun && !cleanDeps && !cleanIndex && !cleanAll {
+		if !cleanBun && !cleanDeps && !cleanTypes && !cleanIndex && !cleanAll {
 			cleanDeps = true
 		}
 
@@ -130,6 +129,13 @@ Use flags to specify what to clean:
 		if cleanDeps {
 			fmt.Println("Removing dependency caches...")
 			if err := c.CleanDeps(); err != nil {
+				return err
+			}
+		}
+
+		if cleanTypes {
+			fmt.Println("Removing typecheck caches...")
+			if err := c.CleanTypecheck(); err != nil {
 				return err
 			}
 		}
@@ -162,6 +168,7 @@ var cacheDirCmd = &cobra.Command{
 func init() {
 	cacheCleanCmd.Flags().BoolVar(&cleanBun, "bun", false, "Remove Bun binaries")
 	cacheCleanCmd.Flags().BoolVar(&cleanDeps, "deps", false, "Remove dependencies")
+	cacheCleanCmd.Flags().BoolVar(&cleanTypes, "typecheck", false, "Remove typecheck dependencies")
 	cacheCleanCmd.Flags().BoolVar(&cleanIndex, "index", false, "Remove index cache")
 	cacheCleanCmd.Flags().BoolVar(&cleanAll, "all", false, "Remove everything")
 
@@ -169,6 +176,21 @@ func init() {
 	cacheCmd.AddCommand(cacheCleanCmd)
 	cacheCmd.AddCommand(cacheDirCmd)
 	rootCmd.AddCommand(cacheCmd)
+}
+
+func printHashes(hashes []string) {
+	if len(hashes) == 0 {
+		fmt.Println("  (none)")
+		return
+	}
+
+	for _, h := range hashes {
+		display := h
+		if len(h) > 12 {
+			display = h[:12] + "..."
+		}
+		fmt.Printf("  %s\n", display)
+	}
 }
 
 func formatSize(bytes int64) string {
