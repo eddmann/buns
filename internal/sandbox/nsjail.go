@@ -73,9 +73,9 @@ func (n *Nsjail) buildArgs(cfg *Config) ([]string, error) {
 
 	// Additional resource limits
 	args = append(args,
-		"--rlimit_fsize", "50",   // Max file size 50MB
+		"--rlimit_fsize", "50", // Max file size 50MB
 		"--rlimit_nofile", "128", // Max open files
-		"--rlimit_nproc", "10",   // Max processes
+		"--rlimit_nproc", "10", // Max processes
 	)
 
 	// Network isolation

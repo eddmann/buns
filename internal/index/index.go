@@ -20,8 +20,8 @@ const (
 )
 
 var (
-	ErrNoCache     = errors.New("no cached index available")
-	versionRegex   = regexp.MustCompile(`^bun-v(\d+\.\d+\.\d+)$`)
+	ErrNoCache   = errors.New("no cached index available")
+	versionRegex = regexp.MustCompile(`^bun-v(\d+\.\d+\.\d+)$`)
 )
 
 // Index manages the cached Bun version index
