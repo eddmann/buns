@@ -170,6 +170,15 @@ run_test_contains "14-sandbox-env.ts" \
     "API_KEY: set"
 
 echo ""
+echo "Type Checking"
+echo "----------------------------------------"
+
+# 15 - Typecheck with external package types
+run_test "15-typecheck.ts" \
+    "$BUNS '$EXAMPLES_DIR/15-typecheck.ts' --typecheck" \
+    "Typed user:"
+
+echo ""
 echo "========================================"
 echo -e "  Results: ${GREEN}$PASS passed${NC}, ${RED}$FAIL failed${NC}"
 echo "========================================"
