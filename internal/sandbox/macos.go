@@ -100,6 +100,10 @@ func (m *MacOS) generateProfile(cfg *Config) string {
 	profile.WriteString("(allow file-read* (literal \"/etc/localtime\"))\n")
 	profile.WriteString("(allow file-read* (literal \"/private/etc/localtime\"))\n\n")
 
+	// Bun 1.3.14+ reads macOS ICU data during startup.
+	profile.WriteString(";; System runtime resources\n")
+	profile.WriteString("(allow file-read* (subpath \"/usr/share/icu\"))\n\n")
+
 	// DNS resolution (only if network enabled)
 	if cfg.Network {
 		profile.WriteString(";; DNS resolution (network enabled)\n")
